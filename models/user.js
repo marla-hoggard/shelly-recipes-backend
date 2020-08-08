@@ -53,19 +53,23 @@ const signin = async (request, response) => {
     return response.status(422).json({ error: "Password is required" });
   }
 
+  const errorMessage = "Username or password is invalid.";
+
   try {
     const user = await getUserByUsername(userReq.username);
     if (!user || user.error) {
-      return response.status(401).json({ error: "Username or password is invalid."});
+      return response.status(401).json({ error: errorMessage});
     }
 
-    // Returns true or throws error if password doesn't match
-    await checkPassword(user, userReq.password);
-
-    const userToReturn = await updateUserToken(user.id);
-    return response.status(200).json({ user: userToReturn });
+    const isValidPassword = await checkPassword(user, userReq.password);
+    if (isValidPassword) {
+      const userToReturn = await updateUserToken(user.id);
+      return response.status(200).json({ user: userToReturn });
+    } else {
+      return response.status(401).json({ error: errorMessage});
+    }
   } catch(e) {
-    return response.status(401).json({ error: "Username or password is invalid."});
+    return response.status(401).json({ error: errorMessage});
   }
 };
 
