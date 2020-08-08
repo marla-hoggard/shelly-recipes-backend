@@ -1,5 +1,5 @@
-const { hashPassword, createToken } = require('../helpers/user.js');
-const { createUser } = require('../queries/user.js');
+const { hashPassword, checkPassword, createToken } = require('../helpers/user.js');
+const { createUser, getUserByUsername, updateUserToken } = require('../queries/user.js');
 
 // Creates a new user - POST to /signup
 // Expects first_name, last_name, username, email, password in request.body
@@ -37,11 +37,39 @@ const signup = async (request, response) => {
     } else if (error.constraint === 'users_email_key') {
       return response.status(422).json({ error: `Email ${userReq.email} already has an account. Please log in.` });
     } else {
-      return response.status(500).json({ error: error.detail });
+      return response.status(500).json({ error: error.detail || "Something went wrong. Please try again." });
     }
   }
-}
+};
+
+// Signs in a user - POST to /signin
+// Expects username, password in request.body
+const signin = async (request, response) => {
+  const userReq = request.body;
+  if (!userReq.username) {
+    return response.status(422).json({ error: "Username is required" });
+  }
+  if (!userReq.password) {
+    return response.status(422).json({ error: "Password is required" });
+  }
+
+  try {
+    const user = await getUserByUsername(userReq.username);
+    if (!user || user.error) {
+      return response.status(401).json({ error: "Username or password is invalid."});
+    }
+
+    // Returns true or throws error if password doesn't match
+    await checkPassword(user, userReq.password);
+
+    const userToReturn = await updateUserToken(user.id);
+    return response.status(200).json({ user: userToReturn });
+  } catch(e) {
+    return response.status(401).json({ error: "Username or password is invalid."});
+  }
+};
 
 module.exports = {
   signup,
+  signin,
 }
