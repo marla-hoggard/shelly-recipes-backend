@@ -13,19 +13,19 @@ const signup = async (request, response) => {
   const userReq = request.body;
 
   if (!userReq.first_name) {
-    return response.status(422).json({ error: "First name is required" });
+    return response.status(400).json({ error: "First name is required" });
   }
   if (!userReq.last_name) {
-    return response.status(422).json({ error: "Last name is required" });
+    return response.status(400).json({ error: "Last name is required" });
   }
   if (!userReq.email) {
-    return response.status(422).json({ error: "Email is required" });
+    return response.status(400).json({ error: "Email is required" });
   }
   if (!userReq.username) {
-    return response.status(422).json({ error: "Username is required" });
+    return response.status(400).json({ error: "Username is required" });
   }
   if (!userReq.password) {
-    return response.status(422).json({ error: "Password is required" });
+    return response.status(400).json({ error: "Password is required" });
   }
 
   try {
@@ -58,27 +58,26 @@ const signup = async (request, response) => {
 const signin = async (request, response) => {
   const userReq = request.body;
   if (!userReq.username) {
-    return response.status(422).json({ error: "Username is required" });
+    return response.status(400).json({ error: "Username is required" });
   }
   if (!userReq.password) {
-    return response.status(422).json({ error: "Password is required" });
+    return response.status(400).json({ error: "Password is required" });
   }
-
-  const errorMessage = "Username or password is invalid.";
 
   const user = await getUserByUsername(userReq.username);
   if (user.error) {
-    return response.status(401).json({ error: errorMessage});
+    return response.status(401).json({ error: "Username or password is invalid."});
   }
 
   const isValidPassword = await checkPassword(user, userReq.password);
   if (isValidPassword) {
     const userToReturn = await updateUserToken(user.id);
-    return response.status(200).json({ user: userToReturn });
+    return userToReturn.error
+      ? response.status(500).json({ error: user.error })
+      : response.status(200).json({ user: userToReturn });
   } else {
-    return response.status(401).json({ error: errorMessage});
+    return response.status(401).json({ error: "Username or password is invalid."});
   }
-
 };
 
 // Attempts to sign out a user - POST /signout
@@ -87,7 +86,7 @@ const signout = async (request, response) => {
   const { id } = request.body;
 
   if (!id) {
-    return response.status(422).json({ error: "User id is required." });
+    return response.status(400).json({ error: "User id is required." });
   }
 
   const user = await getUserById(id);
@@ -101,7 +100,7 @@ const signout = async (request, response) => {
 
   const result = await clearUserToken(user.id);
   if (result.error) {
-    return response.status(422).json({ error: "Something went wrong. User token not removed." });
+    return response.status(500).json({ error: "Something went wrong. User token not removed." });
   }
   return response.status(200).json("User successfully signed out.");
 }
