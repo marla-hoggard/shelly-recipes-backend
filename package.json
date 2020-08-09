@@ -11,6 +11,7 @@
     "bcrypt": "3.0.7",
     "express": "^4.17.1",
     "knex": "^0.21.3",
+    "object.fromentries": "^2.0.2",
     "pg": "^8.3.0"
   },
   "devDependencies": {

@@ -1,8 +1,10 @@
+const fromEntries = require('object.fromentries');
+
 const { hashPassword, checkPassword, createToken } = require('../helpers/user.js');
 const {
   createUser,
   getUserByUsername,
-  getUserById,
+  updateUserQuery,
   updateUserToken,
   clearUserToken,
   deleteUser: deleteUserQuery,
@@ -90,6 +92,63 @@ const signout = async (request, response) => {
     : response.status(200).send("User successfully signed out.");
 }
 
+// GET /user/:username
+// Returns the public profile information for the user with :username
+// Not currently behind an auth wall
+const getUserProfile = async (request, response) => {
+  const username = request.params.username;
+
+  const user = await getUserByUsername(username);
+  if (user.error) {
+    return user.error === "No data found."
+      ? response.status(404).json({ error: "User not found." })
+      : response.status(400).json({ error: user.error });
+  }
+
+  return response.status(200).json({
+    first_name: user.first_name,
+    last_name: user.last_name,
+    username: user.username,
+    email: user.email,
+  });
+}
+
+// PUT /user/:id
+// Updates any valid profile information sent in request.body for user with :id
+// Invalid keys will be ignored
+// Must be  authenticated as the user with :id
+const updateUser = async (request, response) => {
+  const id = parseInt(request.params.id);
+
+  // Verify that the current user is the user to update
+  if (request.user.id !== id) {
+    return response.status(401).json({ error: "Access denied. You do not have permission to modify this user."});
+  }
+
+  const toUpdate = fromEntries(
+    Object.entries(request.body)
+      .filter(([key]) => ["first_name", "last_name", "username", "password", "email"].includes(key)
+    ),
+  );
+
+
+  if (!toUpdate || !Object.keys(toUpdate).length) {
+    return response.status(400).json({ error: "Please provide valid data to update."});
+  }
+
+  if (toUpdate.password) {
+    const hashedPassword = await hashPassword(toUpdate.password);
+    delete toUpdate.password;
+    toUpdate.password_hash = hashedPassword;
+  }
+
+
+  const result = await updateUserQuery(id, toUpdate);
+  return result.error
+    ? response.status(400).json({ error: result.error })
+    : response.status(200).json({ user: result });
+}
+
 // Attempts to delete the user with id :id - DELETE /user/:id
 // Requires a @token to be sent in the header
 // @token must match that of the user with @id
@@ -115,5 +174,7 @@ module.exports = {
   signup,
   signin,
   signout,
+  getUserProfile,
+  updateUser,
   deleteUser,
 }

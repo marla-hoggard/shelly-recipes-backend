@@ -17,9 +17,12 @@ app.use(
 app.get('/', (request, response) => {
   response.json({ info: 'API made with Node.js and PostgreSQL for storing recipes.' })
 });
+// User
 app.post('/signup', User.signup);
 app.post('/signin', User.signin);
 app.post('/signout', isAuthenticated, User.signout);
+app.get('/user/:username', User.getUserProfile);
+app.put('/user/:id', isAuthenticated, User.updateUser);
 app.delete('/user/:id', isAuthenticated, User.deleteUser);
 
 

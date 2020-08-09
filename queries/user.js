@@ -13,7 +13,7 @@ const createUser = async (user) => {
 
 const getUserByUsername = async (username) => {
   return fetchQuerySingleRow(
-    "SELECT * FROM users WHERE username = ?",
+    "SELECT * FROM users WHERE username ILIKE ?",
     [username],
   )
 };
@@ -31,6 +31,23 @@ const getUserByToken = async (token) => {
     [token],
   )
 };
+
+const updateUserQuery = async (userId, toUpdate) => {
+  const setString =
+    Object.keys(toUpdate)
+      .map(key => `${key} = ?`)
+      .join(", ");
+  const vars = Object.values(toUpdate).concat(userId);
+
+  return fetchQuerySingleRow(
+    `UPDATE users
+      SET ${setString}
+      WHERE id = ?
+      RETURNING id, username, first_name, last_name, email
+    `,
+    vars,
+  )
+}
 
 const updateUserToken = async (userId) => {
   const token = await createToken();
@@ -67,6 +84,7 @@ module.exports = {
   getUserByUsername,
   getUserById,
   getUserByToken,
+  updateUserQuery,
   updateUserToken,
   clearUserToken,
   deleteUser,
