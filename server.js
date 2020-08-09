@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const app = express();
 const port = 8000;
 
+const { isAuthenticated } = require('./middleware.js');
 const User = require('./models/user.js');
 
 app.use(bodyParser.json());
@@ -18,7 +19,8 @@ app.get('/', (request, response) => {
 });
 app.post('/signup', User.signup);
 app.post('/signin', User.signin);
-app.post('/signout', User.signout);
+app.post('/signout', isAuthenticated, User.signout);
+app.delete('/user/:id', isAuthenticated, User.deleteUser);
 
 
 // Start the app on the right port

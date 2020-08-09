@@ -37,7 +37,22 @@ const fetchQueryAllRows = async (query, vars) => {
   }
 };
 
+// Accepts a delete query and its variables
+// Returns the number of rows that were deleted
+const sendDeleteQuery = async (query, vars) => {
+  try {
+    const data = await database.raw(query, vars);
+    return data.rowCount;
+  }
+  catch (error) {
+    const [query, message] = error.message.split(" - ");
+    console.error({ error: message, query });
+    return { error };
+  }
+};
+
 module.exports = {
   fetchQuerySingleRow,
   fetchQueryAllRows,
+  sendDeleteQuery,
 }

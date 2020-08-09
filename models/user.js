@@ -5,6 +5,7 @@ const {
   getUserById,
   updateUserToken,
   clearUserToken,
+  deleteUser: deleteUserQuery,
 } = require('../queries/user.js');
 
 // Creates a new user - POST /signup
@@ -81,32 +82,38 @@ const signin = async (request, response) => {
 };
 
 // Attempts to sign out a user - POST /signout
-// Expects the id of a user in request.body
+// Must be signed to access => Expects @token in header
 const signout = async (request, response) => {
-  const { id } = request.body;
+  const result = await clearUserToken(request.user.id);
+  return result.error
+    ? response.status(500).json({ error: "Something went wrong. User token not removed." })
+    : response.status(200).send("User successfully signed out.");
+}
 
-  if (!id) {
-    return response.status(400).json({ error: "User id is required." });
+// Attempts to delete the user with id :id - DELETE /user/:id
+// Requires a @token to be sent in the header
+// @token must match that of the user with @id
+const deleteUser = async (request, response) => {
+  const id = parseInt(request.params.id);
+
+  // Verify that the current user is the user to delete
+  if (request.user.id !== id) {
+    return response.status(401).json({ error: "Access denied. You do not have permission to delete this user."});
   }
 
-  const user = await getUserById(id);
-  if (user.error) {
-    return response.status(422).json({ error: "No user found." });
-  }
-
-  if (!user.token) {
-    return response.status(422).json({ error: "User was not signed in." });
-  }
-
-  const result = await clearUserToken(user.id);
+  const result = await deleteUserQuery(id);
   if (result.error) {
-    return response.status(500).json({ error: "Something went wrong. User token not removed." });
+    return response.status(500).json({ error: result.error });
   }
-  return response.status(200).json("User successfully signed out.");
+
+  return result > 0
+    ? response.status(200).send("User successfully deleted.")
+    : response.status(404).json({ error: `No user found.`});
 }
 
 module.exports = {
   signup,
   signin,
   signout,
+  deleteUser,
 }

@@ -17,6 +17,12 @@ const createToken = async () => {
   });
 };
 
+// Checks if the @token matches that of the user with id @userId
+// Returns true or false
+const checkAuthentication = async (userId, token) => {
+
+}
+
 module.exports = {
   hashPassword,
   checkPassword,
