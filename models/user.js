@@ -1,5 +1,11 @@
 const { hashPassword, checkPassword, createToken } = require('../helpers/user.js');
-const { createUser, getUserByUsername, updateUserToken } = require('../queries/user.js');
+const {
+  createUser,
+  getUserByUsername,
+  getUserById,
+  updateUserToken,
+  clearUserToken,
+} = require('../queries/user.js');
 
 // Creates a new user - POST /signup
 // Expects first_name, last_name, username, email, password in request.body
@@ -75,7 +81,33 @@ const signin = async (request, response) => {
 
 };
 
+// Attempts to sign out a user - POST /signout
+// Expects the id of a user in request.body
+const signout = async (request, response) => {
+  const { id } = request.body;
+
+  if (!id) {
+    return response.status(422).json({ error: "User id is required." });
+  }
+
+  const user = await getUserById(id);
+  if (user.error) {
+    return response.status(422).json({ error: "No user found." });
+  }
+
+  if (!user.token) {
+    return response.status(422).json({ error: "User was not signed in." });
+  }
+
+  const result = await clearUserToken(user.id);
+  if (result.error) {
+    return response.status(422).json({ error: "Something went wrong. User token not removed." });
+  }
+  return response.status(200).json("User successfully signed out.");
+}
+
 module.exports = {
   signup,
   signin,
+  signout,
 }

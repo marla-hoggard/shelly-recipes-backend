@@ -18,6 +18,13 @@ const getUserByUsername = async (username) => {
   )
 };
 
+const getUserById = async (userId) => {
+  return fetchQuerySingleRow(
+    "SELECT * FROM users WHERE id = ?",
+    [userId],
+  )
+}
+
 const updateUserToken = async (userId) => {
   const token = await createToken();
   return fetchQuerySingleRow(
@@ -30,8 +37,21 @@ const updateUserToken = async (userId) => {
   )
 }
 
+const clearUserToken = async (userId) => {
+  return fetchQuerySingleRow(
+    `UPDATE users
+      SET token = ?
+      WHERE id = ?
+      RETURNING id
+    `,
+    [null, userId],
+  )
+}
+
 module.exports = {
   createUser,
   getUserByUsername,
+  getUserById,
   updateUserToken,
+  clearUserToken,
 };

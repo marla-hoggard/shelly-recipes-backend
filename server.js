@@ -18,6 +18,7 @@ app.get('/', (request, response) => {
 });
 app.post('/signup', User.signup);
 app.post('/signin', User.signin);
+app.post('/signout', User.signout);
 
 
 // Start the app on the right port
