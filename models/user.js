@@ -1,5 +1,3 @@
-const fromEntries = require('object.fromentries');
-
 const { hashPassword, checkPassword, createToken } = require('../helpers/user.js');
 const {
   createUser,
@@ -125,7 +123,7 @@ const updateUser = async (request, response) => {
     return response.status(401).json({ error: "Access denied. You do not have permission to modify this user."});
   }
 
-  const toUpdate = fromEntries(
+  const toUpdate = Object.fromEntries(
     Object.entries(request.body)
       .filter(([key]) => ["first_name", "last_name", "username", "password", "email"].includes(key)
     ),

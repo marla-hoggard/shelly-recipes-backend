@@ -23,6 +23,8 @@ CREATE TABLE users (
 
 The app is configured with hot-reloading, so any saved changes will automatically restart the server. Any errors and console logs can be viewed in the terminal window where you started the server.
 
+**Note:** Must be running Node v12 or higher.
+
 ### Authentication Method
 
 Sessions/authentication are handled via tokens. When a user signs up or logs in, a token is generated and stored in the users database. When the user hits `/signout`, the token is destroyed. A client should store the token in web storage, such as session storage, and pass it in the header with any API call that is gated by the `isAuthenticated` middleware.
