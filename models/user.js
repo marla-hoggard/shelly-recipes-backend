@@ -38,6 +38,7 @@ const signup = async (request, response) => {
 
     const user = await createUser(userReq);
     if (user.error) {
+      console.log(user);
       // Checks if the error was for duplicate username or email address
       // Otherwise throws generic error
       if (user.error.constraint === 'users_username_key') {
@@ -45,12 +46,12 @@ const signup = async (request, response) => {
       } else if (user.error.constraint === 'users_email_key') {
         return response.status(422).json({ error: `Email ${userReq.email} already has an account. Please log in.` });
       } else {
-        return response.status(500).json({ error: user.error.detail || "Something went wrong. Please try again." });
+        return response.status(500).json({ error: user.error.details || "Something went wrong. Please try again." });
       }
     }
     return response.status(201).json({ user });
   } catch (error) {
-    return response.status(500).json({ error: error.detail || "Something went wrong. Please try again." });
+    return response.status(500).json({ error: error.details || "Something went wrong. Please try again." });
   }
 };
 

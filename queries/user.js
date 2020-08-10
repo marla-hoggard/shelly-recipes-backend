@@ -1,82 +1,73 @@
+const environment = process.env.NODE_ENV || 'development';
+const configuration = require('../knexfile')[environment];
+const knex = require('knex')(configuration);
+
 const { createToken } = require('../helpers/user.js');
-const { fetchQuerySingleRow, sendDeleteQuery } = require('./helpers.js');
+const { fetchQuerySingleRow, fetchQuery } = require('./helpers.js');
 
 const createUser = async (user) => {
-  return fetchQuerySingleRow(
-    `INSERT INTO users (first_name, last_name, username, email, password_hash, token)
-      VALUES (?, ?, ?, ?, ?, ?)
-      RETURNING id, username, token`
-    ,
-    [user.first_name, user.last_name, user.username, user.email, user.password_hash, user.token],
-  );
+  const query = () => {
+    return knex('users').insert({ ...user }, ['id', 'username', 'token'])
+  }
+  return fetchQuerySingleRow(query);
 };
 
 const getUserByUsername = async (username) => {
-  return fetchQuerySingleRow(
-    "SELECT * FROM users WHERE username ILIKE ?",
-    [username],
-  )
+  const query = () => knex.select('*').from('users').where('username', 'ilike', username);
+  return fetchQuerySingleRow(query);
 };
 
 const getUserById = async (userId) => {
-  return fetchQuerySingleRow(
-    "SELECT * FROM users WHERE id = ?",
-    [userId],
-  )
+  const query = () => knex.select('*').from('users').where('id', userId);
+  return fetchQuerySingleRow(query);
 };
 
 const getUserByToken = async (token) => {
-  return fetchQuerySingleRow(
-    "SELECT * FROM users WHERE token = ?",
-    [token],
-  )
+  const query = () => knex.select('*').from('users').where({ token });
+  return fetchQuerySingleRow(query);
 };
 
 const updateUserQuery = async (userId, toUpdate) => {
-  const setString =
-    Object.keys(toUpdate)
-      .map(key => `${key} = ?`)
-      .join(", ");
-  const vars = Object.values(toUpdate).concat(userId);
+  const query = () => {
+    return knex('users')
+      .where('id', userId)
+      .update(
+        toUpdate,
+        ['id', 'username', 'first_name', 'last_name', 'email']
+      );
+  }
 
-  return fetchQuerySingleRow(
-    `UPDATE users
-      SET ${setString}
-      WHERE id = ?
-      RETURNING id, username, first_name, last_name, email
-    `,
-    vars,
-  )
+  return fetchQuerySingleRow(query);
 }
 
 const updateUserToken = async (userId) => {
   const token = await createToken();
-  return fetchQuerySingleRow(
-    `UPDATE users
-      SET token = ?
-      WHERE id = ?
-      RETURNING id, username, token
-    `,
-    [token, userId],
-  )
+  const query = () => {
+    return knex('users')
+      .where('id', userId)
+      .update(
+        { token },
+        ['id', 'username', 'token']
+      );
+  };
+  return fetchQuerySingleRow(query);
 }
 
 const clearUserToken = async (userId) => {
-  return fetchQuerySingleRow(
-    `UPDATE users
-      SET token = ?
-      WHERE id = ?
-      RETURNING id
-    `,
-    [null, userId],
-  )
+  const query = () => {
+    return knex('users')
+      .where('id', userId)
+      .update(
+        { token: null },
+        ['id', 'username', 'token'],
+      );
+  };
+  return fetchQuerySingleRow(query);
 }
 
 const deleteUser = async (userId) => {
-  return sendDeleteQuery(
-    "DELETE FROM users WHERE id = ?",
-    [userId]
-  )
+  const query = () => knex('users').where('id', userId).del();
+  return fetchQuery(query);
 }
 
 module.exports = {
