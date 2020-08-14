@@ -4,6 +4,7 @@ const app = express();
 const port = 8000;
 
 const { isAuthenticated } = require('./middleware.js');
+const Recipe = require('./models/recipe.js');
 const User = require('./models/user.js');
 
 app.use(bodyParser.json());
@@ -17,14 +18,17 @@ app.use(
 app.get('/', (request, response) => {
   response.json({ info: 'API made with Node.js and PostgreSQL for storing recipes.' })
 });
-// User
+
+// Recipe Routes
+app.post('/recipe/new', Recipe.addRecipe);
+
+// User Routes
 app.post('/signup', User.signup);
 app.post('/signin', User.signin);
 app.post('/signout', isAuthenticated, User.signout);
 app.get('/user/:username', User.getUserProfile);
 app.put('/user/:id', isAuthenticated, User.updateUser);
 app.delete('/user/:id', isAuthenticated, User.deleteUser);
-
 
 // Start the app on the right port
 app.listen(port, () => {

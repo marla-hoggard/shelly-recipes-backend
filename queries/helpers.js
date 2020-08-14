@@ -1,7 +1,7 @@
 const queryError = error => {
   const [query, message] = error.message.split(" - ");
   console.error({ error: message, query });
-  return { error: {...error, details: message } };
+  return { error: {...error, details: message, query } };
 }
 
 // Returns the first row from the result of @query
@@ -37,4 +37,5 @@ const fetchQuery = async (query) => {
 module.exports = {
   fetchQuery,
   fetchQuerySingleRow,
+  queryError,
 };
