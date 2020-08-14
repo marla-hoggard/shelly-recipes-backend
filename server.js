@@ -14,6 +14,12 @@ app.use(
   }),
 );
 
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  next();
+});
+
 // Routes
 app.get('/', (request, response) => {
   response.json({ info: 'API made with Node.js and PostgreSQL for storing recipes.' })
