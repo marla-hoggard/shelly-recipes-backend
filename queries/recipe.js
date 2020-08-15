@@ -17,9 +17,8 @@ const addRecipe = async (request) => {
   };
 
   let recipe_id;
-  let result;
   try {
-    result = await knex.transaction(async trx => {
+    return await knex.transaction(async trx => {
       try {
         const ids = await trx('recipes').insert(recipe, 'id');
         if (!ids || !ids.length) {
@@ -109,7 +108,6 @@ const addRecipe = async (request) => {
       }
     };
   }
-  return result;
 };
 
 module.exports = {
