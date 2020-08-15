@@ -2,7 +2,7 @@ const environment = process.env.NODE_ENV || 'development';
 const configuration = require('../knexfile')[environment];
 const knex = require('knex')(configuration);
 
-const { queryError } = require('./helpers.js');
+const { queryError, fetchQuery } = require('./helpers.js');
 
 const addRecipe = async (request) => {
   const recipe = {
@@ -110,6 +110,18 @@ const addRecipe = async (request) => {
   }
 };
 
+const getAllRecipes = async () => {
+  const query = () =>
+    knex('recipes')
+    .innerJoin("tags", "recipes.id", "tags.recipe_id")
+    .select('recipes.*',  knex.raw('array_agg(tags.tag) as tags'))
+    .groupBy('recipes.id')
+    .orderBy("recipes.title");
+
+  return await fetchQuery(query);
+}
+
 module.exports = {
   addRecipe,
+  getAllRecipes,
 };

@@ -1,7 +1,20 @@
 const {
-  addRecipe: addRecipeQuery
+  addRecipe: addRecipeQuery,
+  getAllRecipes: getAllRecipesQuery,
 } = require('../queries/recipe.js');
 
+// Gets all recipes from the database
+// Returns all data from @recipes plus an array of tags (no ingredients or steps)
+// TODO: Add query parameter for limit+offset
+const getAllRecipes = async (request, response) => {
+  const result = await getAllRecipesQuery();
+  const status = result.error ? 400 : 200;
+  return response.status(status).json(result);
+};
+
+// Adds a new recipe based on the data sent in request.body
+// Returns @id and @title of the new recipe on success
+// Returns @error with @message and optional @detalils keys on error
 const addRecipe = async (request, response) => {
   const userReq = request.body;
 
@@ -52,4 +65,5 @@ const addRecipe = async (request, response) => {
 
 module.exports = {
   addRecipe,
+  getAllRecipes,
 };

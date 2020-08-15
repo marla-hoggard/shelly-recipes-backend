@@ -28,7 +28,8 @@ app.get('/', (request, response) => {
 });
 
 // Recipe Routes
-app.post('/recipe/new', Recipe.addRecipe);
+app.get('/recipes', Recipe.getAllRecipes);
+app.post('/recipe/new', Recipe.addRecipe); // TODO: Require authentication
 
 // User Routes
 app.post('/signup', User.signup);
