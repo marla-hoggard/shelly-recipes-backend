@@ -6,35 +6,35 @@ const addRecipe = async (request, response) => {
   const userReq = request.body;
 
   if (!userReq.title) {
-    return response.status(400).json({ error: "'title' is required" });
+    return response.status(400).json({ error: { message: "'title' is required" } });
   }
 
   if (!userReq.submittedBy) {
-    return response.status(400).json({ error: "'submittedBy' is required" });
+    return response.status(400).json({ error: { message:"'submittedBy' is required" }});
   }
 
   if (!userReq.category) {
-    return response.status(400).json({ error: "'category' is required" });
+    return response.status(400).json({ error: { message:"'category' is required" }});
   }
 
   if (!userReq.ingredients || !userReq.ingredients.length) {
-    return response.status(400).json({ error: "At least one ingredient is required" });
+    return response.status(400).json({ error: { message:"At least one ingredient is required" }});
   }
 
   if (!Array.isArray(userReq.ingredients)) {
-    return response.status(400).json({ error: "Type Error: 'ingredients' must be an array" });
+    return response.status(400).json({ error: { message:"Type Error: 'ingredients' must be an array" }});
   }
 
   if (!userReq.steps || !userReq.steps.length) {
-    return response.status(400).json({ error: "At least one step is required" });
+    return response.status(400).json({ error: { message:"At least one step is required" }});
   }
 
   if (!Array.isArray(userReq.steps)) {
-    return response.status(400).json({ error: "Type Error: 'steps' must be an array" });
+    return response.status(400).json({ error: { message:"Type Error: 'steps' must be an array" }});
   }
 
   if (userReq.tags && !Array.isArray(userReq.tags)) {
-    return response.status(400).json({ error: "Type Error: 'tags' must be an array" });
+    return response.status(400).json({ error: { message:"Type Error: 'tags' must be an array" }});
   }
 
   const result = await addRecipeQuery(userReq);
