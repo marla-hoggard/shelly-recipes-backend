@@ -95,7 +95,7 @@ const signout = async (request, response) => {
 // Returns the public profile information for the user with :username
 // Not currently behind an auth wall
 const getUserProfile = async (request, response) => {
-  const username = request.params.username;
+  const { username } = request.params;
 
   const user = await getUserByUsername(username);
   if (user.error) {
@@ -164,7 +164,7 @@ const deleteUser = async (request, response) => {
     return response.status(500).json({ error: result.error });
   }
 
-  return result > 0
+  return result.data && result.data > 0
     ? response.status(200).send("User successfully deleted.")
     : response.status(404).json({ error: `No user found.`});
 }

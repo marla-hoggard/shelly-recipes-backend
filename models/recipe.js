@@ -1,6 +1,7 @@
 const {
   addRecipe: addRecipeQuery,
   getAllRecipes: getAllRecipesQuery,
+  getFullRecipe,
 } = require('../queries/recipe.js');
 
 // Gets all recipes from the database
@@ -11,6 +12,13 @@ const getAllRecipes = async (request, response) => {
   const status = result.error ? 400 : 200;
   return response.status(status).json(result);
 };
+
+// Gets all data for the recipe with @id from request.params
+const getRecipe = async (request, response) => {
+  const id = parseInt(request.params.id);
+  const result = await getFullRecipe(id);
+  return response.status(result.status).json(result.data || { error: result.error });
+}
 
 // Adds a new recipe based on the data sent in request.body
 // Returns @id and @title of the new recipe on success
@@ -65,5 +73,6 @@ const addRecipe = async (request, response) => {
 
 module.exports = {
   addRecipe,
+  getRecipe,
   getAllRecipes,
 };

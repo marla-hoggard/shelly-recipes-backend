@@ -27,7 +27,8 @@ const fetchQuerySingleRow = async (query) => {
 // If there is an error, logs the error and returns it as key 'error'
 const fetchQuery = async (query) => {
   try {
-    return await query();
+    const data = await query();
+    return { data };
   }
   catch (error) {
     return queryError(error);
