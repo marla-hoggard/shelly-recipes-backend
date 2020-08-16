@@ -302,7 +302,7 @@ const getFullRecipe = async (id) => {
   const recipe = await getRecipeById(id);
   if (recipe.error) {
     return recipe.error === "No data found."
-      ? { error: "Recipe not found.", status: 404 }
+      ? { error: { message: "Recipe not found."}, status: 404 }
       : { error: { messsage: recipe.error.details, hint: recipe.error.hint }, status: 400 };
   }
 
