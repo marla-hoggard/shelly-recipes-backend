@@ -1,5 +1,6 @@
 const {
   addRecipe: addRecipeQuery,
+  editRecipe: editRecipeQuery,
   getAllRecipes: getAllRecipesQuery,
   getFullRecipe,
 } = require('../queries/recipe.js');
@@ -59,7 +60,6 @@ const addRecipe = async (request, response) => {
   }
 
   const result = await addRecipeQuery(userReq);
-  console.log(result);
   if (result.error) {
     return response.status(400).json({
       error: {
@@ -71,8 +71,44 @@ const addRecipe = async (request, response) => {
   return response.status(200).json({ id: result.recipe_id, title: userReq.title });
 };
 
+// Edit the recipe whose id is in request.params based on the data sent in request.body
+// Returns @id and @title of the new recipe on success
+// Returns @error with @message and optional @detalils keys on error
+const editRecipe = async (request, response) => {
+  const id = parseInt(request.params.id);
+  const userReq = request.body;
+
+  if (!Object.keys(userReq).length) {
+     return response.status(400).json({ error: { message:"You must include data to update in the request body." }});
+  }
+
+  if (userReq.tags && !Array.isArray(userReq.tags)) {
+    return response.status(400).json({ error: { message:"Type Error: 'tags' must be an array" }});
+  }
+
+  if (userReq.ingredients && !Array.isArray(userReq.ingredients)) {
+    return response.status(400).json({ error: { message:"Type Error: 'ingredients' must be an array" }});
+  }
+
+  if (userReq.steps && !Array.isArray(userReq.steps)) {
+    return response.status(400).json({ error: { message:"Type Error: 'steps' must be an array" }});
+  }
+
+  const result = await editRecipeQuery(id, userReq);
+  if (result.error) {
+    return response.status(result.error.status || 400).json({
+      error: {
+        message: result.error.message,
+        details: result.error.details
+      }
+    });
+  }
+  return response.status(200).json({ id: result.recipe_id, title: userReq.title });
+};
+
 module.exports = {
   addRecipe,
+  editRecipe,
   getRecipe,
   getAllRecipes,
 };

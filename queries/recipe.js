@@ -110,6 +110,167 @@ const addRecipe = async (request) => {
   }
 };
 
+const editRecipe = async (recipe_id, request) => {
+  const recipe = Object.fromEntries(
+    Object.entries(request)
+      .filter(([key]) =>
+        [
+          "title",
+          "source",
+          "sourceUrl",
+          "submittedBy",
+          "servings",
+          "category",
+          "vegetarian"
+        ].includes(key)
+      ),
+  );
+
+  try {
+    return await knex.transaction(async trx => {
+      try {
+        const updateCount = await trx('recipes').where('id', recipe_id).update(recipe);
+
+        if (!updateCount) {
+          return {
+            error: {
+              message: "Recipe not found",
+              status: 404,
+            }
+          };
+        }
+      } catch (error) {
+        const response = queryError(error);
+        return {
+          error: {
+            details: response.error.details || response.error.query,
+            message: "Error updating recipes table.",
+            status: 400,
+          }
+        };
+      }
+
+      if (request.ingredients) {
+        try {
+          const ingDel = await knex('ingredients').where('recipe_id', recipe_id).del();
+          console.log(`${ingDel} ingredients deleted.`);
+        } catch (error) {
+          const response = queryError(error);
+          return {
+            error: {
+              details: response.error.details || response.error.query,
+              message: "Error deleting ingredients.",
+              status: 400,
+            }
+          };
+        }
+
+        // TODO: Add footnotes
+        const ingredients = request.ingredients.map((ingredient, i) => ({
+          ingredient,
+          recipe_order: i,
+          recipe_id,
+        }));
+
+        try {
+          const ingInserted = await trx('ingredients').insert(ingredients);
+          console.log(`${ingInserted.rowCount} ingredients added for ${recipe_id}.`);
+        } catch (error) {
+          const response = queryError(error);
+          return {
+            error: {
+              details: response.error.details || response.error.query,
+              message: "Error adding ingredients.",
+              status: 400,
+            }
+          };
+        }
+      }
+
+      if (request.steps) {
+        try {
+          const ingDel = await knex('steps').where('recipe_id', recipe_id).del();
+          console.log(`${ingDel.data} steps deleted.`);
+        } catch (error) {
+          const response = queryError(error);
+          return {
+            error: {
+              details: response.error.details || response.error.query,
+              message: "Error deleting steps.",
+              status: 400,
+            }
+          };
+        }
+
+        // TODO: Add footnotes
+        const steps = request.steps.map((step, i) => ({
+          step,
+          recipe_order: i,
+          recipe_id,
+        }));
+
+        try {
+          const stepInserted = await trx('steps').insert(steps);
+          console.log(`${stepInserted.rowCount} steps added for ${recipe_id}.`);
+        } catch (error) {
+          const response = queryError(error);
+          return {
+            error: {
+              details: response.error.details || response.error.query,
+              message: "Error adding steps.",
+              status: 400,
+            }
+          };
+        }
+      }
+
+      if (request.tags) {
+        try {
+          const tagsDel = await knex('tags').where('recipe_id', recipe_id).del();
+          console.log(`${tagsDel.data} tags deleted.`);
+        } catch (error) {
+          const response = queryError(error);
+          return {
+            error: {
+              details: response.error.details || response.error.query,
+              message: "Error deleting tags.",
+              status: 400,
+            }
+          };
+        }
+
+        try {
+          const tags = request.tags.map(tag => ({
+            tag: tag.toLowerCase(),
+            recipe_id,
+          }));
+          const tagsInserted = await trx('tags').insert(tags);
+          console.log(`${tagsInserted.rowCount} tags added for ${recipe_id}.`);
+        } catch (error) {
+          const response = queryError(error);
+          return {
+            error: {
+              details: response.error.details || response.error.query,
+              message: "Error adding tags.",
+              status: 400,
+            }
+          };
+        }
+      }
+      return { recipe_id };
+    });
+  } catch (error) {
+    const response = queryError(error);
+    return {
+      error: {
+        details: response.error.details || response.error.query,
+        message: "Something went wrong.",
+        status: 400,
+      }
+    };
+  }
+};
+
 const getAllRecipes = async () => {
   const query = () =>
     knex('recipes')
@@ -191,6 +352,7 @@ const getFullRecipe = async (id) => {
 
 module.exports = {
   addRecipe,
+  editRecipe,
   getAllRecipes,
   getFullRecipe,
 };
