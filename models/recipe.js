@@ -59,6 +59,10 @@ const addRecipe = async (request, response) => {
     return response.status(400).json({ error: { message:"Type Error: 'tags' must be an array" }});
   }
 
+  if (userReq.notes && !Array.isArray(userReq.notes)) {
+    return response.status(400).json({ error: { message:"Type Error: 'notes' must be an array" }});
+  }
+
   const result = await addRecipeQuery(userReq);
   if (result.error) {
     return response.status(400).json({

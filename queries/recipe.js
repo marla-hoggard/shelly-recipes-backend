@@ -60,7 +60,6 @@ const addRecipe = async (request) => {
         };
       }
 
-      // TODO: Add footnotes
       const steps = request.steps.map((step, i) => ({
         step,
         recipe_order: i,
@@ -97,6 +96,24 @@ const addRecipe = async (request) => {
           };
         }
       }
+
+      const notes = request.notes.map((note, i) => ({
+        note,
+        recipe_order: i,
+        recipe_id,
+      }));
+      try {
+        const notesInserted = await trx('notes').insert(notes);
+        console.log(`${notesInserted.rowCount} notes added for ${recipe_id}.`);
+      } catch (error) {
+        const response = queryError(error);
+        return {
+          error: {
+            details: response.error.details || response.error.query,
+            message: "Error adding notes."
+          }
+        };
+      }
       return { recipe_id };
     });
   } catch (error) {
@@ -128,26 +145,28 @@ const editRecipe = async (recipe_id, request) => {
 
   try {
     return await knex.transaction(async trx => {
-      try {
-        const updateCount = await trx('recipes').where('id', recipe_id).update(recipe);
+      if (Object.keys(recipe).length) {
+        try {
+          const updateCount = await trx('recipes').where('id', recipe_id).update(recipe);
 
-        if (!updateCount) {
+          if (!updateCount) {
+            return {
+              error: {
+                message: "Recipe not found",
+                status: 404,
+              }
+            };
+          }
+        } catch (error) {
+          const response = queryError(error);
           return {
             error: {
-              message: "Recipe not found",
-              status: 404,
+              details: response.error.details || response.error.query,
+              message: "Error updating recipes table.",
+              status: 400,
             }
           };
         }
-      } catch (error) {
-        const response = queryError(error);
-        return {
-          error: {
-            details: response.error.details || response.error.query,
-            message: "Error updating recipes table.",
-            status: 400,
-          }
-        };
       }
 
       if (request.ingredients) {
@@ -202,7 +221,6 @@ const editRecipe = async (recipe_id, request) => {
           };
         }
 
-        // TODO: Add footnotes
         const steps = request.steps.map((step, i) => ({
           step,
           recipe_order: i,
@@ -257,6 +275,41 @@ const editRecipe = async (recipe_id, request) => {
           };
         }
       }
+
+      if (request.notes) {
+        try {
+          const notesDel = await knex('notes').where('recipe_id', recipe_id).del();
+          console.log(`${notesDel.data} notes deleted.`);
+        } catch (error) {
+          const response = queryError(error);
+          return {
+            error: {
+              details: response.error.details || response.error.query,
+              message: "Error deleting notes.",
+              status: 400,
+            }
+          };
+        }
+
+        try {
+          const notes = request.notes.map((note, i) => ({
+            note: note.toLowerCase(),
+            recipe_order: i,
+            recipe_id,
+          }));
+          const notesInserted = await trx('notes').insert(notes);
+          console.log(`${notesInserted.rowCount} notes added for ${recipe_id}.`);
+        } catch (error) {
+          const response = queryError(error);
+          return {
+            error: {
+              details: response.error.details || response.error.query,
+              message: "Error adding notes.",
+              status: 400,
+            }
+          };
+        }
+      }
       return { recipe_id };
     });
   } catch (error) {
@@ -296,6 +349,10 @@ const getIngredientsByRecipeId = async id => {
 
 const getStepsByRecipeId = async id => {
   return await fetchQuery(() => knex.select('step').from('steps').where('recipe_id', id).orderBy('recipe_order'));
+}
+
+const getNotesByRecipeId = async id => {
+  return await fetchQuery(() => knex.select('note').from('notes').where('recipe_id', id).orderBy('recipe_order'));
 }
 
 const getFullRecipe = async (id) => {
@@ -339,12 +396,24 @@ const getFullRecipe = async (id) => {
     };
   }
 
+  const notes = await getNotesByRecipeId(id);
+  if (notes.error) {
+    return {
+      error: {
+        messsage: notes.error.details,
+        hint: notes.error.hint
+      },
+      status: 400
+    };
+  }
+
   return {
     data: {
       ...recipe,
       tags: tags.data.map(t => t.tag),
       ingredients: ingredients.data.map(i => i.ingredient),
-      steps: steps.data.map(s => s.step)
+      steps: steps.data.map(s => s.step),
+      notes: notes.data.map(n => n.note)
     },
     status: 200,
   }
