@@ -59,6 +59,10 @@ const addRecipe = async (request, response) => {
     return response.status(400).json({ error: { message:"Type Error: 'tags' must be an array" }});
   }
 
+  if (userReq.tags && userReq.tags.some(el => typeof el !== "string")) {
+    return response.status(400).json({ error: { message:"Type Error: All 'tags' must be of type string" }});
+  }
+
   if (userReq.notes && !Array.isArray(userReq.notes)) {
     return response.status(400).json({ error: { message:"Type Error: 'notes' must be an array" }});
   }
@@ -88,6 +92,10 @@ const editRecipe = async (request, response) => {
 
   if (userReq.tags && !Array.isArray(userReq.tags)) {
     return response.status(400).json({ error: { message:"Type Error: 'tags' must be an array" }});
+  }
+
+  if (userReq.tags && userReq.tags.some(el => typeof el !== "string")) {
+    return response.status(400).json({ error: { message:"Type Error: All 'tags' must be of type string" }});
   }
 
   if (userReq.ingredients && !Array.isArray(userReq.ingredients)) {

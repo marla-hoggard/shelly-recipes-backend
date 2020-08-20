@@ -2,7 +2,13 @@ const environment = process.env.NODE_ENV || 'development';
 const configuration = require('../knexfile')[environment];
 const knex = require('knex')(configuration);
 
-const { queryError, fetchQuery, fetchQuerySingleRow } = require('./helpers.js');
+const {
+  queryError,
+  fetchQuery,
+  fetchQuerySingleRow,
+  insertViaTrx,
+  deleteAndInsertViaTrx,
+} = require('./helpers.js');
 
 const addRecipe = async (request) => {
   const recipe = {
@@ -40,80 +46,42 @@ const addRecipe = async (request) => {
         };
       }
 
-      // TODO: Add footnotes
-      const ingredients = request.ingredients.map((ingredient, i) => ({
+      const ingredients = request.ingredients.map(({ ingredient, footnote }, i) => ({
         ingredient,
+        footnote,
         recipe_order: i,
         recipe_id,
       }));
-
-      try {
-        const ingInserted = await trx('ingredients').insert(ingredients);
-        console.log(`${ingInserted.rowCount} ingredients added for ${recipe_id}.`);
-      } catch (error) {
-        const response = queryError(error);
-        return {
-          error: {
-            details: response.error.details || response.error.query,
-            message: "Error adding ingredients."
-          }
-        };
-      }
+      const ingredientsResult = await insertViaTrx(trx, 'ingredients', ingredients, recipe_id);
+      if (ingredientsResult.error) return ingredientsResult;
 
       const steps = request.steps.map((step, i) => ({
         step,
         recipe_order: i,
         recipe_id,
       }));
-      try {
-        const stepsInserted = await trx('steps').insert(steps);
-        console.log(`${stepsInserted.rowCount} steps added for ${recipe_id}.`);
-      } catch (error) {
-        const response = queryError(error);
-        return {
-          error: {
-            details: response.error.details || response.error.query,
-            message: "Error adding steps."
-          }
-        };
-      }
+      const stepsResult = await insertViaTrx(trx, 'steps', steps, recipe_id);
+      if (stepsResult.error) return stepsResult;
 
       if (request.tags) {
-        try {
-          const tags = request.tags.map(tag => ({
-            tag: tag.toLowerCase(),
-            recipe_id,
-          }));
-          const tagsInserted = await trx('tags').insert(tags);
-          console.log(`${tagsInserted.rowCount} tags added for ${recipe_id}.`);
-        } catch (error) {
-          const response = queryError(error);
-          return {
-            error: {
-              details: response.error.details || response.error.query,
-              message: "Error adding tags."
-            }
-          };
-        }
+        const tags = request.tags.map(tag => ({
+          tag: tag.toLowerCase(),
+          recipe_id,
+        }));
+        const tagsResult = await insertViaTrx(trx, 'tags', tags, recipe_id);
+        if (tagsResult.error) return tagsResult;
       }
 
-      const notes = request.notes.map((note, i) => ({
+      if (request.notes) {
+        const notes = request.notes.map((note, i) => ({
         note,
         recipe_order: i,
         recipe_id,
       }));
-      try {
-        const notesInserted = await trx('notes').insert(notes);
-        console.log(`${notesInserted.rowCount} notes added for ${recipe_id}.`);
-      } catch (error) {
-        const response = queryError(error);
-        return {
-          error: {
-            details: response.error.details || response.error.query,
-            message: "Error adding notes."
-          }
-        };
+        const notesResult = await insertViaTrx(trx, 'notes', notes, recipe_id);
+        if (notesResult.error) return notesResult;
       }
+
       return { recipe_id };
     });
   } catch (error) {
@@ -170,145 +138,44 @@ const editRecipe = async (recipe_id, request) => {
       }
 
       if (request.ingredients) {
-        try {
-          const ingDel = await knex('ingredients').where('recipe_id', recipe_id).del();
-          console.log(`${ingDel} ingredients deleted.`);
-        } catch (error) {
-          const response = queryError(error);
-          return {
-            error: {
-              details: response.error.details || response.error.query,
-              message: "Error deleting ingredients.",
-              status: 400,
-            }
-          };
-        }
-
-        // TODO: Add footnotes
-        const ingredients = request.ingredients.map((ingredient, i) => ({
+        const ingredients = request.ingredients.map(({ ingredient, footnote }, i) => ({
           ingredient,
+          footnote,
           recipe_order: i,
           recipe_id,
         }));
-
-        try {
-          const ingInserted = await trx('ingredients').insert(ingredients);
-          console.log(`${ingInserted.rowCount} ingredients added for ${recipe_id}.`);
-        } catch (error) {
-          const response = queryError(error);
-          return {
-            error: {
-              details: response.error.details || response.error.query,
-              message: "Error adding ingredients.",
-              status: 400,
-            }
-          };
-        }
+        const ingResult = await deleteAndInsertViaTrx(trx, 'ingredients', ingredients, recipe_id);
+        if (ingResult.error) return ingResult;
       }
 
       if (request.steps) {
-        try {
-          const ingDel = await knex('steps').where('recipe_id', recipe_id).del();
-          console.log(`${ingDel.data} steps deleted.`);
-        } catch (error) {
-          const response = queryError(error);
-          return {
-            error: {
-              details: response.error.details || response.error.query,
-              message: "Error deleting steps.",
-              status: 400,
-            }
-          };
-        }
-
         const steps = request.steps.map((step, i) => ({
           step,
           recipe_order: i,
           recipe_id,
         }));
 
-        try {
-          const stepInserted = await trx('steps').insert(steps);
-          console.log(`${stepInserted.rowCount} steps added for ${recipe_id}.`);
-        } catch (error) {
-          const response = queryError(error);
-          return {
-            error: {
-              details: response.error.details || response.error.query,
-              message: "Error adding steps.",
-              status: 400,
-            }
-          };
-        }
+        const stepsResult = await deleteAndInsertViaTrx(trx, 'steps', steps, recipe_id);
+        if (stepsResult.error) return stepsResult;
       }
 
       if (request.tags) {
-        try {
-          const tagsDel = await knex('tags').where('recipe_id', recipe_id).del();
-          console.log(`${tagsDel.data} tags deleted.`);
-        } catch (error) {
-          const response = queryError(error);
-          return {
-            error: {
-              details: response.error.details || response.error.query,
-              message: "Error deleting tags.",
-              status: 400,
-            }
-          };
-        }
-
-        try {
-          const tags = request.tags.map(tag => ({
-            tag: tag.toLowerCase(),
-            recipe_id,
-          }));
-          const tagsInserted = await trx('tags').insert(tags);
-          console.log(`${tagsInserted.rowCount} tags added for ${recipe_id}.`);
-        } catch (error) {
-          const response = queryError(error);
-          return {
-            error: {
-              details: response.error.details || response.error.query,
-              message: "Error adding tags.",
-              status: 400,
-            }
-          };
-        }
+        const tags = request.tags.map(tag => ({
+          tag: tag.toLowerCase(),
+          recipe_id,
+        }));
+        const tagsResult = await deleteAndInsertViaTrx(trx, 'tags', tags, recipe_id);
+        if (tagsResult.error) return tagsResult;
       }
 
       if (request.notes) {
-        try {
-          const notesDel = await knex('notes').where('recipe_id', recipe_id).del();
-          console.log(`${notesDel.data} notes deleted.`);
-        } catch (error) {
-          const response = queryError(error);
-          return {
-            error: {
-              details: response.error.details || response.error.query,
-              message: "Error deleting notes.",
-              status: 400,
-            }
-          };
-        }
-
-        try {
-          const notes = request.notes.map((note, i) => ({
-            note: note.toLowerCase(),
-            recipe_order: i,
-            recipe_id,
-          }));
-          const notesInserted = await trx('notes').insert(notes);
-          console.log(`${notesInserted.rowCount} notes added for ${recipe_id}.`);
-        } catch (error) {
-          const response = queryError(error);
-          return {
-            error: {
-              details: response.error.details || response.error.query,
-              message: "Error adding notes.",
-              status: 400,
-            }
-          };
-        }
+        const notes = request.notes.map((note, i) => ({
+          note: note.toLowerCase(),
+          recipe_order: i,
+          recipe_id,
+        }));
+        const notesResult = await deleteAndInsertViaTrx(trx, 'notes', notes, recipe_id);
+        if (notesResult.error) return notesResult;
       }
       return { recipe_id };
     });
@@ -344,7 +211,7 @@ const getTagsByRecipeId = async id => {
 };
 
 const getIngredientsByRecipeId = async id => {
-  return await fetchQuery(() => knex.select('ingredient').from('ingredients').where('recipe_id', id).orderBy('recipe_order'));
+  return await fetchQuery(() => knex.select('ingredient', 'footnote').from('ingredients').where('recipe_id', id).orderBy('recipe_order'));
 };
 
 const getStepsByRecipeId = async id => {
@@ -411,7 +278,7 @@ const getFullRecipe = async (id) => {
     data: {
       ...recipe,
       tags: tags.data.map(t => t.tag),
-      ingredients: ingredients.data.map(i => i.ingredient),
+      ingredients: ingredients.data.map(i => ({ ingredient: i.ingredient, footnote: i.footnote })),
       steps: steps.data.map(s => s.step),
       notes: notes.data.map(n => n.note)
     },

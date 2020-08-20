@@ -1,3 +1,7 @@
+const environment = process.env.NODE_ENV || 'development';
+const configuration = require('../knexfile')[environment];
+const knex = require('knex')(configuration);
+
 const queryError = error => {
   const [query, message] = error.message.split(" - ");
   console.error({ error: message, query });
@@ -35,8 +39,57 @@ const fetchQuery = async (query) => {
   }
 };
 
+const insertViaTrx = async (trx, name, toAdd, recipe_id) => {
+  try {
+    const inserted = await trx(name).insert(toAdd);
+    console.log(`${inserted.rowCount} ${name} added for ${recipe_id}.`);
+    return { data: inserted };
+  } catch (error) {
+    const response = queryError(error);
+    return {
+      error: {
+        details: response.error.details || response.error.query,
+        message: `Error adding ${name}.`
+      }
+    };
+  }
+}
+
+const deleteAndInsertViaTrx = async (trx, name, toAdd, recipe_id) => {
+  try {
+    const deleteCount = await knex(name).where('recipe_id', recipe_id).del();
+    console.log(`${deleteCount} ${name} deleted.`);
+  } catch (error) {
+    const response = queryError(error);
+    return {
+      error: {
+        details: response.error.details || response.error.query,
+        message: `Error deleting ${name}.`,
+        status: 400,
+      }
+    };
+  }
+
+  try {
+    const inserted = await trx(name).insert(toAdd);
+    console.log(`${inserted.rowCount} ${name} added for ${recipe_id}.`);
+    return { data: inserted };
+  } catch (error) {
+    const response = queryError(error);
+    return {
+      error: {
+        details: response.error.details || response.error.query,
+        message: `Error adding ${name}.`,
+        status: 400,
+      }
+    };
+  }
+}
+
 module.exports = {
   fetchQuery,
   fetchQuerySingleRow,
+  insertViaTrx,
+  deleteAndInsertViaTrx,
   queryError,
 };
