@@ -31,8 +31,8 @@ const addRecipe = async (request, response) => {
     return response.status(400).json({ error: { message: "'title' is required" } });
   }
 
-  if (!userReq.submittedBy) {
-    return response.status(400).json({ error: { message:"'submittedBy' is required" }});
+  if (!userReq.submitted_by) {
+    return response.status(400).json({ error: { message:"'submitted_by' is required" }});
   }
 
   if (!userReq.category) {

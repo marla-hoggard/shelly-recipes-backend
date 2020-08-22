@@ -14,12 +14,12 @@ const addRecipe = async (request) => {
   const recipe = {
     title: request.title,
     source: request.source || null,
-    sourceUrl: request.sourceUrl || null,
-    submittedBy: request.submittedBy,
+    source_url: request.source_url || null,
+    submitted_by: request.submitted_by,
     servings: request.servings || null,
     category: request.category,
     vegetarian: request.vegetarian || false,
-    createdAt: new Date(),
+    created_at: new Date(),
   };
 
   let recipe_id;
@@ -102,8 +102,8 @@ const editRecipe = async (recipe_id, request) => {
         [
           "title",
           "source",
-          "sourceUrl",
-          "submittedBy",
+          "source_url",
+          "submitted_by",
           "servings",
           "category",
           "vegetarian"
