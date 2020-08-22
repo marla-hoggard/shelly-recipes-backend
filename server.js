@@ -1,8 +1,10 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const app = express();
-const port = 8000;
+const port = process.env.PORT || 8000;
 
 const { isAuthenticated } = require('./middleware.js');
 const Recipe = require('./models/recipe.js');
@@ -16,7 +18,7 @@ app.use(
 );
 
 const corsOptions = {
-  origin: ["http://localhost:3000", /herokuapp\.com$/],
+  origin: [process.env.FRONTEND_BASE_URL_LOCAL, /herokuapp\.com$/],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 };
