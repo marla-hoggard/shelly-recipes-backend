@@ -70,20 +70,7 @@ const deleteAndInsertViaTrx = async (trx, name, toAdd, recipe_id) => {
     };
   }
 
-  try {
-    const inserted = await trx(name).insert(toAdd);
-    console.log(`${inserted.rowCount} ${name} added for ${recipe_id}.`);
-    return { data: inserted };
-  } catch (error) {
-    const response = queryError(error);
-    return {
-      error: {
-        details: response.error.details || response.error.query,
-        message: `Error adding ${name}.`,
-        status: 400,
-      }
-    };
-  }
+  return await insertViaTrx(trx, name, toAdd, recipe_id);
 }
 
 module.exports = {

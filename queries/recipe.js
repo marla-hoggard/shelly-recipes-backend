@@ -46,9 +46,9 @@ const addRecipe = async (request) => {
         };
       }
 
-      const ingredients = request.ingredients.map(({ ingredient, footnote }, i) => ({
+      const ingredients = request.ingredients.map(({ ingredient, note }, i) => ({
         ingredient,
-        footnote,
+        note,
         recipe_order: i,
         recipe_id,
       }));
@@ -72,14 +72,14 @@ const addRecipe = async (request) => {
         if (tagsResult.error) return tagsResult;
       }
 
-      if (request.notes) {
-        const notes = request.notes.map((note, i) => ({
-        note,
+      if (request.footnotes) {
+        const footnotes = request.footnotes.map((footnote, i) => ({
+        footnote,
         recipe_order: i,
         recipe_id,
       }));
-        const notesResult = await insertViaTrx(trx, 'notes', notes, recipe_id);
-        if (notesResult.error) return notesResult;
+        const footnotesResult = await insertViaTrx(trx, 'footnotes', footnotes, recipe_id);
+        if (footnotesResult.error) return footnotesResult;
       }
 
       return { recipe_id };
@@ -138,9 +138,9 @@ const editRecipe = async (recipe_id, request) => {
       }
 
       if (request.ingredients) {
-        const ingredients = request.ingredients.map(({ ingredient, footnote }, i) => ({
+        const ingredients = request.ingredients.map(({ ingredient, note }, i) => ({
           ingredient,
-          footnote,
+          note,
           recipe_order: i,
           recipe_id,
         }));
@@ -168,14 +168,14 @@ const editRecipe = async (recipe_id, request) => {
         if (tagsResult.error) return tagsResult;
       }
 
-      if (request.notes) {
-        const notes = request.notes.map((note, i) => ({
-          note: note.toLowerCase(),
+      if (request.footnotes) {
+        const footnotes = request.footnotes.map((footnote, i) => ({
+          footnote: footnote.toLowerCase(),
           recipe_order: i,
           recipe_id,
         }));
-        const notesResult = await deleteAndInsertViaTrx(trx, 'notes', notes, recipe_id);
-        if (notesResult.error) return notesResult;
+        const footnotesResult = await deleteAndInsertViaTrx(trx, 'footnotes', footnotes, recipe_id);
+        if (footnotesResult.error) return footnotesResult;
       }
       return { recipe_id };
     });
@@ -211,15 +211,15 @@ const getTagsByRecipeId = async id => {
 };
 
 const getIngredientsByRecipeId = async id => {
-  return await fetchQuery(() => knex.select('ingredient', 'footnote').from('ingredients').where('recipe_id', id).orderBy('recipe_order'));
+  return await fetchQuery(() => knex.select('ingredient', 'note').from('ingredients').where('recipe_id', id).orderBy('recipe_order'));
 };
 
 const getStepsByRecipeId = async id => {
   return await fetchQuery(() => knex.select('step').from('steps').where('recipe_id', id).orderBy('recipe_order'));
 }
 
-const getNotesByRecipeId = async id => {
-  return await fetchQuery(() => knex.select('note').from('notes').where('recipe_id', id).orderBy('recipe_order'));
+const getFootnotesByRecipeId = async id => {
+  return await fetchQuery(() => knex.select('footnote').from('footnotes').where('recipe_id', id).orderBy('recipe_order'));
 }
 
 const getFullRecipe = async (id) => {
@@ -263,12 +263,12 @@ const getFullRecipe = async (id) => {
     };
   }
 
-  const notes = await getNotesByRecipeId(id);
-  if (notes.error) {
+  const footnotes = await getFootnotesByRecipeId(id);
+  if (footnotes.error) {
     return {
       error: {
-        messsage: notes.error.details,
-        hint: notes.error.hint
+        messsage: footnotes.error.details,
+        hint: footnotes.error.hint
       },
       status: 400
     };
@@ -278,9 +278,9 @@ const getFullRecipe = async (id) => {
     data: {
       ...recipe,
       tags: tags.data.map(t => t.tag),
-      ingredients: ingredients.data.map(i => ({ ingredient: i.ingredient, footnote: i.footnote })),
+      ingredients: ingredients.data.map(i => ({ ingredient: i.ingredient, note: i.note })),
       steps: steps.data.map(s => s.step),
-      notes: notes.data.map(n => n.note)
+      footnotes: footnotes.data.map(f => f.footnote)
     },
     status: 200,
   }

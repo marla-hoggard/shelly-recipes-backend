@@ -63,8 +63,8 @@ const addRecipe = async (request, response) => {
     return response.status(400).json({ error: { message:"Type Error: All 'tags' must be of type string" }});
   }
 
-  if (userReq.notes && !Array.isArray(userReq.notes)) {
-    return response.status(400).json({ error: { message:"Type Error: 'notes' must be an array" }});
+  if (userReq.footnotes && !Array.isArray(userReq.footnotes)) {
+    return response.status(400).json({ error: { message:"Type Error: 'footnotes' must be an array" }});
   }
 
   const result = await addRecipeQuery(userReq);
