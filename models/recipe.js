@@ -29,9 +29,10 @@ const getRecipe = async (request, response) => {
   return response.status(result.status).json(result.data || { error: result.error });
 }
 
-// Returns the list of recipes that match the provided search params
+// Returns the list of recipes that match the provided search params, ordered by title
 // @params.all: boolean -> Whether recipes need to match ALL or ANY of the search terms
 // @params.wildcard -> Search title, ingredients/notes, step, tags and footnotes for the term
+// @params.limit -> Optionally limit to that number
 // @params[column_name] -> Searches the given column for matches
 //    Supports: title, source, submitted_by, category, vegetarian
 //              step, footnote, tags, ingredients

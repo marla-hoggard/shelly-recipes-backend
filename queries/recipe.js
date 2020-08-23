@@ -242,6 +242,7 @@ const searchRecipesMatchAll = async (params) => {
     tags,
     ingredients,
     wildcard,
+    limit,
   } = params;
 
   const queries = [];
@@ -274,9 +275,17 @@ const searchRecipesMatchAll = async (params) => {
     return { error: "You must provide at least one search parameter"};
   }
 
-  if (queries.length === 1) return await fetchQuery(() => queries[0]);
-
-  return await fetchQuery(() => queries[0].intersect(...queries.slice(1), true));
+  return await fetchQuery(() =>
+    queries[0]
+    .modify(qb => {
+      if (queries.length > 1) {
+        qb.intersect(...queries.slice(1), true)
+      }
+      if (limit) {
+        qb.limit(parseInt(limit));
+      }
+    })
+  );
 }
 
 // Returns an array of recipe ids that match ANY of the search params
@@ -292,6 +301,7 @@ const searchRecipesMatchAny = async (params) => {
     tags,
     ingredients,
     wildcard,
+    limit,
   } = params;
 
   const queries = [];
@@ -324,9 +334,17 @@ const searchRecipesMatchAny = async (params) => {
     return { error: "You must provide at least one search parameter"};
   }
 
-  if (queries.length === 1) return await fetchQuery(() => queries[0]);
-
-  return await fetchQuery(() => queries[0].union(...queries.slice(1), true));
+  return await fetchQuery(() =>
+    queries[0]
+    .modify(qb => {
+      if (queries.length > 1) {
+        qb.union(...queries.slice(1), true)
+      }
+      if (limit) {
+        qb.limit(parseInt(limit));
+      }
+    })
+  );
 }
 
 // @params = { key: value } where keys in searchable columns of recipes table
