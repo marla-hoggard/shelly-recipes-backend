@@ -3,6 +3,9 @@ const {
   editRecipe: editRecipeQuery,
   getAllRecipes: getAllRecipesQuery,
   getFullRecipe,
+  searchRecipesMatchAll,
+  searchRecipesMatchAny,
+  getRecipesByIds,
 } = require('../queries/recipe.js');
 
 // Gets all recipes from the database
@@ -19,6 +22,24 @@ const getRecipe = async (request, response) => {
   const id = parseInt(request.params.id);
   const result = await getFullRecipe(id);
   return response.status(result.status).json(result.data || { error: result.error });
+}
+
+// Returns the list of recipes that match the provided search params
+// @params.all: boolean -> Whether recipes need to match ALL or ANY of the search terms
+const searchRecipes = async (request, response) => {
+  const all = Boolean(request.query.all);
+
+  const { data, error } = all ? await searchRecipesMatchAll(request.query) : await searchRecipesMatchAny(request.query);
+
+  console.log({ data, error });
+
+  if (error) return response.status(400).json({ error });
+
+  const ids = data.map(el => el.recipe_id);
+
+  const recipes = ids.length ? await getRecipesByIds(ids) : { data: [] };
+  const status = recipes.error ? 400 : 200;
+  return response.status(status).json(recipes);
 }
 
 // Adds a new recipe based on the data sent in request.body
@@ -123,4 +144,5 @@ module.exports = {
   editRecipe,
   getRecipe,
   getAllRecipes,
+  searchRecipes,
 };

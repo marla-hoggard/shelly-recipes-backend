@@ -202,9 +202,14 @@ const getAllRecipes = async () => {
   return await fetchQuery(query);
 };
 
+// Getters -> Return exact matches
 const getRecipeById = async id => {
   return await fetchQuerySingleRow(() => knex.select('*').from('recipes').where('id', id));
 };
+
+const getRecipesByIds = async (ids) => {
+  return await fetchQuery(() => knex.select('*').from('recipes').whereIn('id', ids).orderBy('title'));
+}
 
 const getTagsByRecipeId = async id => {
   return await fetchQuery(() => knex.select('tag').from('tags').where('recipe_id', id));
@@ -221,6 +226,213 @@ const getStepsByRecipeId = async id => {
 const getFootnotesByRecipeId = async id => {
   return await fetchQuery(() => knex.select('footnote').from('footnotes').where('recipe_id', id).orderBy('recipe_order'));
 }
+
+// Search -> Return list of recipe_ids based on case insensitive search queries
+
+// Returns an array of recipe ids that match ALL search params
+const searchRecipesMatchAll = async (params) => {
+  console.log("searchRecipesMatchAll")
+  const {
+    title,
+    source,
+    submitted_by,
+    category,
+    vegetarian,
+    step,
+    footnote,
+    tags,
+    ingredients,
+  } = params;
+
+  const queries = [];
+
+  if (title || source || submitted_by || category || vegetarian) {
+    queries.push(searchRecipeDataAll({ title, source, submitted_by, category, vegetarian }));
+  }
+
+  if (step) {
+    queries.push(searchRecipesByStep(step));
+  }
+
+  if (ingredients) {
+    queries.push(searchRecipesByIngredientsAll(ingredients));
+  }
+
+  if (tags) {
+    queries.push(searchRecipesByTagsAll(tags));
+  }
+
+  if (footnote) {
+    queries.push(searchRecipesByFootnote(footnote));
+  }
+
+  if (!queries.length) {
+    return { error: "You must provide at least one search parameter"};
+  }
+
+  if (queries.length === 1) return await fetchQuery(() => queries[0]);
+
+  return await fetchQuery(() => queries[0].intersect(...queries.slice(1)));
+}
+
+// Returns an array of recipe ids that match ANY of the search params
+const searchRecipesMatchAny = async (params) => {
+  console.log("searchRecipesMatchAny")
+  const {
+    title,
+    source,
+    submitted_by,
+    category,
+    vegetarian,
+    step,
+    footnote,
+    tags,
+    ingredients,
+  } = params;
+
+  const queries = [];
+
+  if (title || source || submitted_by || category || vegetarian) {
+    queries.push(searchRecipeDataAny({ title, source, submitted_by, category, vegetarian }));
+  }
+
+  if (step) {
+    queries.push(searchRecipesByStep(step));
+  }
+
+  if (ingredients) {
+    queries.push(searchRecipesByIngredientsAny(ingredients));
+  }
+
+  if (tags) {
+    queries.push(searchRecipesByTagsAny(tags));
+  }
+
+  if (footnote) {
+    queries.push(searchRecipesByFootnote(footnote));
+  }
+
+  if (!queries.length) {
+    return { error: "You must provide at least one search parameter"};
+  }
+
+  if (queries.length === 1) return await fetchQuery(() => queries[0]);
+
+  return await fetchQuery(() => queries[0].union(...queries.slice(1)));
+}
+
+// @params = { key: value } where keys in searchable columns of recipes table
+// Returns a subquery for use in main search function
+const searchRecipeDataAll = (params) => {
+  console.log("searchRecipeDataAll")
+  const { title, source, submitted_by, category, vegetarian} = params;
+  return knex.select('id as recipe_id').from('recipes')
+      .modify(queryBuilder => {
+        if (title !== undefined) {
+          queryBuilder.andWhere('title', '~*', title);
+        }
+        if (source !== undefined) {
+          queryBuilder.andWhere('source', '~*', source);
+        }
+        if (submitted_by !== undefined) {
+          queryBuilder.andWhere('submitted_by', '~*', submitted_by);
+        }
+        if (category !== undefined) {
+          queryBuilder.andWhere({ category });
+        }
+        if (vegetarian !== undefined) {
+          queryBuilder.andWhere({ vegetarian });
+        }
+      });
+}
+
+// @params = { key: value } where keys in searchable columns of recipes table
+// Returns a subquery for use in main search function
+const searchRecipeDataAny = (params) => {
+  const { title, source, submitted_by, category, vegetarian} = params;
+  return knex.select('id as recipe_id').from('recipes')
+      .modify(queryBuilder => {
+        if (title !== undefined) {
+          queryBuilder.orWhere('title', '~*', title);
+        }
+        if (source !== undefined) {
+          queryBuilder.orWhere('source', '~*', source);
+        }
+        if (submitted_by !== undefined) {
+          queryBuilder.orWhere('submitted_by', '~*', submitted_by);
+        }
+        if (category !== undefined) {
+          queryBuilder.orWhere({ category });
+        }
+        if (vegetarian !== undefined) {
+          queryBuilder.orWhere({ vegetarian });
+        }
+      });
+}
+
+// Returns a subquery for use in main search function
+const searchRecipesByStep = (step) => {
+  return knex.distinct('recipe_id').from('steps').where('step', '~*', step);
+}
+
+// Returns a subquery for use in main search function
+const searchRecipesByFootnote = (footnote) => {
+  return knex.distinct('recipe_id').from('footnotes').where('footnote', '~*', footnote);
+}
+
+// @ingredient: string -> a single ingredient or a comma-separated string of ingredients
+// Returns a subquery for use in main search function
+// Query selects returns recipe_ids where ingredient or note matches any of the ingredients
+const searchRecipesByIngredientsAny = (ingredients) => {
+  const searchTerm = ingredients.replace(/,\s*/g, "|");
+  return knex.distinct('recipe_id').from('ingredients')
+      .where('ingredient', '~*', searchTerm)
+      .orWhere('note', '~*', searchTerm);
+}
+
+// @ingredient: string -> a single ingredient or a comma-separated string of ingredients
+// Returns a subquery for use in main search function
+// Query selects recipe_ids whose ingredients or notes match all search terms
+const searchRecipesByIngredientsAll = (ingredients) => {
+  if (!ingredients.includes(",")) {
+    return searchRecipesByIngredientsAny(ingredients);
+  }
+
+  const searchTerms = ingredients.split(",").map(el => el.trim());
+  return knex.distinct('recipe_id').from('ingredients')
+      .where('ingredient', '~*', searchTerms[0]).orWhere('note', '~*', searchTerms[0])
+      .intersect(
+        searchTerms.slice(1).map(term =>
+          knex.distinct('recipe_id').from('ingredients')
+            .where('ingredient', '~*', term).orWhere('note', '~*', term)
+          )
+      );
+}
+
+// @tags: string -> a single ingredient or a comma-separated string of ingredients
+// Returns a subquery for use in main search function
+// Query selects recipe_ids where ingredient or note matches any of the ingredients
+const searchRecipesByTagsAny = (tags) => {
+  const searchTerm = tags.replace(/,\s*/g, "|");
+  return knex.distinct('recipe_id').from('tags').where('tag', '~*', searchTerm);
+}
+
+// Returns a subquery for use in main search function
+const searchRecipesByTagsAll = (tags) => {
+  if (!tags.includes(",")) {
+    return searchRecipesByTagsAny(tags);
+  }
+
+  const searchTerms = tags.split(",").map(el => el.trim());
+  return knex.distinct('recipe_id').from('tags')
+    .where('tag', '~*', searchTerms[0])
+    .intersect(
+      searchTerms.slice(1).map(term =>
+        knex.distinct('recipe_id').from('tags').where('tag', '~*', term)
+      )
+    );
+}
+
 
 const getFullRecipe = async (id) => {
   const recipe = await getRecipeById(id);
@@ -290,5 +502,8 @@ module.exports = {
   addRecipe,
   editRecipe,
   getAllRecipes,
+  getRecipesByIds,
   getFullRecipe,
+  searchRecipesMatchAll,
+  searchRecipesMatchAny,
 };

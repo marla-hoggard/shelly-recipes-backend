@@ -34,6 +34,7 @@ app.get('/recipes', Recipe.getAllRecipes);
 app.get('/recipe/:id', Recipe.getRecipe);
 app.post('/recipe/new', Recipe.addRecipe); // TODO: Require authentication
 app.put('/recipe/:id', Recipe.editRecipe); // TODO: Require auth and that user is admin or matches "submitted by"
+app.get('/search', Recipe.searchRecipes);
 
 // User Routes
 app.post('/signup', User.signup);
