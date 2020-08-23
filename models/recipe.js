@@ -26,12 +26,15 @@ const getRecipe = async (request, response) => {
 
 // Returns the list of recipes that match the provided search params
 // @params.all: boolean -> Whether recipes need to match ALL or ANY of the search terms
+// @params.wildcard -> Search title, ingredients/notes, step, tags and footnotes for the term
+// @params[column_name] -> Searches the given column for matches
+//    Supports: title, source, submitted_by, category, vegetarian
+//              step, footnote, tags, ingredients
+//    tags and ingredients can be a csv, searched separately, rest are literal
 const searchRecipes = async (request, response) => {
   const all = Boolean(request.query.all);
 
   const { data, error } = all ? await searchRecipesMatchAll(request.query) : await searchRecipesMatchAny(request.query);
-
-  console.log({ data, error });
 
   if (error) return response.status(400).json({ error });
 

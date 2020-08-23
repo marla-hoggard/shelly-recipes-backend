@@ -231,7 +231,6 @@ const getFootnotesByRecipeId = async id => {
 
 // Returns an array of recipe ids that match ALL search params
 const searchRecipesMatchAll = async (params) => {
-  console.log("searchRecipesMatchAll")
   const {
     title,
     source,
@@ -242,6 +241,7 @@ const searchRecipesMatchAll = async (params) => {
     footnote,
     tags,
     ingredients,
+    wildcard,
   } = params;
 
   const queries = [];
@@ -266,18 +266,21 @@ const searchRecipesMatchAll = async (params) => {
     queries.push(searchRecipesByFootnote(footnote));
   }
 
+  if (wildcard) {
+    queries.push(searchWildcard(wildcard));
+  }
+
   if (!queries.length) {
     return { error: "You must provide at least one search parameter"};
   }
 
   if (queries.length === 1) return await fetchQuery(() => queries[0]);
 
-  return await fetchQuery(() => queries[0].intersect(...queries.slice(1)));
+  return await fetchQuery(() => queries[0].intersect(...queries.slice(1), true));
 }
 
 // Returns an array of recipe ids that match ANY of the search params
 const searchRecipesMatchAny = async (params) => {
-  console.log("searchRecipesMatchAny")
   const {
     title,
     source,
@@ -288,6 +291,7 @@ const searchRecipesMatchAny = async (params) => {
     footnote,
     tags,
     ingredients,
+    wildcard,
   } = params;
 
   const queries = [];
@@ -312,19 +316,22 @@ const searchRecipesMatchAny = async (params) => {
     queries.push(searchRecipesByFootnote(footnote));
   }
 
+  if (wildcard) {
+    queries.push(searchWildcard(wildcard));
+  }
+
   if (!queries.length) {
     return { error: "You must provide at least one search parameter"};
   }
 
   if (queries.length === 1) return await fetchQuery(() => queries[0]);
 
-  return await fetchQuery(() => queries[0].union(...queries.slice(1)));
+  return await fetchQuery(() => queries[0].union(...queries.slice(1), true));
 }
 
 // @params = { key: value } where keys in searchable columns of recipes table
 // Returns a subquery for use in main search function
 const searchRecipeDataAll = (params) => {
-  console.log("searchRecipeDataAll")
   const { title, source, submitted_by, category, vegetarian} = params;
   return knex.select('id as recipe_id').from('recipes')
       .modify(queryBuilder => {
@@ -405,7 +412,8 @@ const searchRecipesByIngredientsAll = (ingredients) => {
         searchTerms.slice(1).map(term =>
           knex.distinct('recipe_id').from('ingredients')
             .where('ingredient', '~*', term).orWhere('note', '~*', term)
-          )
+        ),
+        true,
       );
 }
 
@@ -429,7 +437,23 @@ const searchRecipesByTagsAll = (tags) => {
     .intersect(
       searchTerms.slice(1).map(term =>
         knex.distinct('recipe_id').from('tags').where('tag', '~*', term)
-      )
+      ),
+      true,
+    );
+}
+
+// Returns a subquery for recipe ids where @searchTerm
+// matches title, ingredient, step, tag or footnote
+const searchWildcard = (searchTerm) => {
+  return searchRecipeDataAny({ title: searchTerm})
+    .union(
+      [
+        searchRecipesByIngredientsAny(searchTerm),
+        searchRecipesByStep(searchTerm),
+        searchRecipesByTagsAny(searchTerm),
+        searchRecipesByFootnote(searchTerm),
+      ],
+      true,
     );
 }
 

@@ -30,7 +30,6 @@ const fetchQuerySingleRow = async (query) => {
 // Returns all rows from the result of @query
 // If there is an error, logs the error and returns it as key 'error'
 const fetchQuery = async (query) => {
-  console.log(query().toString());
   try {
     const data = await query();
     return { data };
