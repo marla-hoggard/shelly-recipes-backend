@@ -36,6 +36,10 @@ app.post('/recipe/new', Recipe.addRecipe); // TODO: Require authentication
 app.put('/recipe/:id', Recipe.editRecipe); // TODO: Require auth and that user is admin or matches "submitted by"
 app.get('/search', Recipe.searchRecipes);
 
+app.get('/categories', Recipe.listCategories);
+app.get('/tags', Recipe.listTags);
+app.get('/submitters', Recipe.listSubmitters);
+
 // User Routes
 app.post('/signup', User.signup);
 app.post('/signin', User.signin);

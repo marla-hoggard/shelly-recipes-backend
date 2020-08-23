@@ -1,3 +1,7 @@
+const environment = process.env.NODE_ENV || 'development';
+const configuration = require('../knexfile')[environment];
+const knex = require('knex')(configuration);
+
 const {
   addRecipe: addRecipeQuery,
   editRecipe: editRecipeQuery,
@@ -7,6 +11,7 @@ const {
   searchRecipesMatchAny,
   getRecipesByIds,
 } = require('../queries/recipe.js');
+const { fetchQuery } = require('../queries/helpers.js');
 
 // Gets all recipes from the database
 // Returns all data from @recipes plus an array of tags (no ingredients or steps)
@@ -142,10 +147,32 @@ const editRecipe = async (request, response) => {
   return response.status(200).json({ id: result.recipe_id, title: userReq.title });
 };
 
+const listCategories = async (request, response) => {
+  const result = await fetchQuery(() => knex.raw('SELECT unnest(enum_range(NULL::category))'));
+  if (result.error) return response.status(500).json({ error: "Something went wrong."});
+  const categories = result.data.rows.map(el => el.unnest);
+  return response.status(200).json({ categories });
+};
+
+const listTags = async (request, response) => {
+  const result = await fetchQuery(() => knex.distinct('tag').from('tags').orderBy('tag'));
+  const status = result.error ? 400 : 200;
+  return response.status(status).json({ tags: result.data.map(el => el.tag )});
+}
+
+const listSubmitters = async (request, response) => {
+  const result = await fetchQuery(() => knex.distinct('submitted_by').from('recipes').orderBy('submitted_by'));
+  const status = result.error ? 400 : 200;
+  return response.status(status).json({ tags: result.data.map(el => el.submitted_by )});
+}
+
 module.exports = {
   addRecipe,
   editRecipe,
   getRecipe,
   getAllRecipes,
   searchRecipes,
+  listCategories,
+  listSubmitters,
+  listTags,
 };
