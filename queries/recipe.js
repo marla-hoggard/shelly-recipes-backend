@@ -208,7 +208,7 @@ const getRecipeById = async id => {
 };
 
 const getRecipesByIds = async (ids) => {
-  return await fetchQuery(() => knex.select('*').from('recipes').whereIn('id', ids).orderBy('title'));
+  return await fetchQuery(() => knex.select('title').from('recipes').whereIn('id', ids).orderBy('title'));
 }
 
 const getTagsByRecipeId = async id => {
@@ -268,23 +268,26 @@ const searchRecipesMatchAll = async (params) => {
   }
 
   if (wildcard) {
-    queries.push(searchWildcard(wildcard));
+    if (wildcard.includes(",")) {
+      wildcard.split(",").forEach(el => queries.push(searchWildcard(el.trim())));
+    } else {
+      queries.push(searchWildcard(wildcard));
+    }
   }
 
   if (!queries.length) {
-    return { error: "You must provide at least one search parameter"};
+    return { error: "You must provide at least one search parameter" };
   }
 
   return await fetchQuery(() =>
-    queries[0]
-    .modify(qb => {
-      if (queries.length > 1) {
-        qb.intersect(...queries.slice(1), true)
-      }
-      if (limit) {
-        qb.limit(parseInt(limit));
-      }
-    })
+    knex.select('id as recipe_id').from('recipes')
+      .modify(qb => {
+        queries.forEach(q => qb.whereIn('id', q));
+
+        if (limit) {
+          qb.limit(parseInt(limit));
+        }
+      })
   );
 }
 
@@ -327,7 +330,11 @@ const searchRecipesMatchAny = async (params) => {
   }
 
   if (wildcard) {
-    queries.push(searchWildcard(wildcard));
+    if (wildcard.includes(",")) {
+      wildcard.split(",").forEach(term => queries.push(searchWildcard(term.trim())));
+    } else {
+      queries.push(searchWildcard(wildcard));
+    }
   }
 
   if (!queries.length) {
@@ -335,15 +342,14 @@ const searchRecipesMatchAny = async (params) => {
   }
 
   return await fetchQuery(() =>
-    queries[0]
-    .modify(qb => {
-      if (queries.length > 1) {
-        qb.union(...queries.slice(1), true)
-      }
-      if (limit) {
-        qb.limit(parseInt(limit));
-      }
-    })
+    knex.select('id as recipe_id').from('recipes')
+      .modify(qb => {
+        queries.forEach(q => qb.orWhereIn('id', q));
+
+        if (limit) {
+          qb.limit(parseInt(limit));
+        }
+      })
   );
 }
 
@@ -354,7 +360,13 @@ const searchRecipeDataAll = (params) => {
   return knex.select('id as recipe_id').from('recipes')
       .modify(queryBuilder => {
         if (title !== undefined) {
-          queryBuilder.andWhere('title', '~*', title);
+          if (title.includes(",")) {
+            title.split(",").forEach(term => {
+              queryBuilder.andWhere('title', '~*', term.trim());
+            });
+          } else {
+            queryBuilder.andWhere('title', '~*', title.trim());
+          }
         }
         if (source !== undefined) {
           queryBuilder.andWhere('source', '~*', source);
@@ -378,7 +390,7 @@ const searchRecipeDataAny = (params) => {
   return knex.select('id as recipe_id').from('recipes')
       .modify(queryBuilder => {
         if (title !== undefined) {
-          queryBuilder.orWhere('title', '~*', title);
+          queryBuilder.orWhere('title', '~*', title.replace(/\s+,\s+/g, "|"));
         }
         if (source !== undefined) {
           queryBuilder.orWhere('source', '~*', source);
