@@ -230,15 +230,15 @@ const getFootnotesByRecipeId = async id => {
 // Search -> Return list of recipe_ids based on case insensitive search queries
 
 // Returns an array of recipe ids that match ALL search params
-const searchRecipesMatchAll = async (params) => {
+const searchRecipesForMatches = async (params, matchAll) => {
   const {
     title,
     source,
     submitted_by,
     category,
     vegetarian,
-    step,
-    footnote,
+    steps,
+    footnotes,
     tags,
     ingredients,
     wildcard,
@@ -248,30 +248,30 @@ const searchRecipesMatchAll = async (params) => {
   const queries = [];
 
   if (title || source || submitted_by || category || vegetarian) {
-    queries.push(searchRecipeDataAll({ title, source, submitted_by, category, vegetarian }));
+    queries.push(searchRecipeData({ title, source, submitted_by, category, vegetarian }, matchAll));
   }
 
-  if (step) {
-    queries.push(searchRecipesByStep(step));
+  if (steps) {
+    queries.push(searchRecipeSteps(steps, matchAll));
   }
 
   if (ingredients) {
-    queries.push(searchRecipesByIngredientsAll(ingredients));
+    queries.push(searchRecipeIngredients(ingredients, matchAll));
   }
 
   if (tags) {
-    queries.push(searchRecipesByTagsAll(tags));
+    queries.push(searchRecipeTags(tags, matchAll));
   }
 
-  if (footnote) {
-    queries.push(searchRecipesByFootnote(footnote));
+  if (footnotes) {
+    queries.push(searchRecipeFootnotes(footnotes, matchAll));
   }
 
   if (wildcard) {
     if (wildcard.includes(",")) {
-      wildcard.split(",").forEach(el => queries.push(searchWildcard(el.trim())));
+      wildcard.split(",").forEach(el => queries.push(searchWildcard(el.trim(), matchAll)));
     } else {
-      queries.push(searchWildcard(wildcard));
+      queries.push(searchWildcard(wildcard, matchAll));
     }
   }
 
@@ -282,7 +282,11 @@ const searchRecipesMatchAll = async (params) => {
   return await fetchQuery(() =>
     knex.select('id as recipe_id').from('recipes')
       .modify(qb => {
-        queries.forEach(q => qb.whereIn('id', q));
+        if (matchAll) {
+          queries.forEach(q => qb.whereIn('id', q));
+        } else {
+          queries.forEach(q => qb.orWhereIn('id', q));
+        }
 
         if (limit) {
           qb.limit(parseInt(limit));
@@ -291,67 +295,9 @@ const searchRecipesMatchAll = async (params) => {
   );
 }
 
-// Returns an array of recipe ids that match ANY of the search params
-const searchRecipesMatchAny = async (params) => {
-  const {
-    title,
-    source,
-    submitted_by,
-    category,
-    vegetarian,
-    step,
-    footnote,
-    tags,
-    ingredients,
-    wildcard,
-    limit,
-  } = params;
-
-  const queries = [];
-
-  if (title || source || submitted_by || category || vegetarian) {
-    queries.push(searchRecipeDataAny({ title, source, submitted_by, category, vegetarian }));
-  }
-
-  if (step) {
-    queries.push(searchRecipesByStep(step));
-  }
-
-  if (ingredients) {
-    queries.push(searchRecipesByIngredientsAny(ingredients));
-  }
-
-  if (tags) {
-    queries.push(searchRecipesByTagsAny(tags));
-  }
-
-  if (footnote) {
-    queries.push(searchRecipesByFootnote(footnote));
-  }
-
-  if (wildcard) {
-    if (wildcard.includes(",")) {
-      wildcard.split(",").forEach(term => queries.push(searchWildcard(term.trim())));
-    } else {
-      queries.push(searchWildcard(wildcard));
-    }
-  }
-
-  if (!queries.length) {
-    return { error: "You must provide at least one search parameter"};
-  }
-
-  return await fetchQuery(() =>
-    knex.select('id as recipe_id').from('recipes')
-      .modify(qb => {
-        queries.forEach(q => qb.orWhereIn('id', q));
-
-        if (limit) {
-          qb.limit(parseInt(limit));
-        }
-      })
-  );
-}
+const searchRecipeData = (params, matchAll) => {
+  return matchAll ? searchRecipeDataAll(params) : searchRecipeDataAny(params);
+};
 
 // @params = { key: value } where keys in searchable columns of recipes table
 // Returns a subquery for use in main search function
@@ -408,35 +354,47 @@ const searchRecipeDataAny = (params) => {
 }
 
 // Returns a subquery for use in main search function
-const searchRecipesByStep = (step) => {
-  return knex.distinct('recipe_id').from('steps').where('step', '~*', step);
-}
-
-// Returns a subquery for use in main search function
-const searchRecipesByFootnote = (footnote) => {
-  return knex.distinct('recipe_id').from('footnotes').where('footnote', '~*', footnote);
-}
-
-// @ingredient: string -> a single ingredient or a comma-separated string of ingredients
-// Returns a subquery for use in main search function
-// Query selects returns recipe_ids where ingredient or note matches any of the ingredients
-const searchRecipesByIngredientsAny = (ingredients) => {
-  const searchTerm = ingredients.replace(/,\s*/g, "|");
-  return knex.distinct('recipe_id').from('ingredients')
-      .where('ingredient', '~*', searchTerm)
-      .orWhere('note', '~*', searchTerm);
-}
-
-// @ingredient: string -> a single ingredient or a comma-separated string of ingredients
-// Returns a subquery for use in main search function
-// Query selects recipe_ids whose ingredients or notes match all search terms
-const searchRecipesByIngredientsAll = (ingredients) => {
-  if (!ingredients.includes(",")) {
-    return searchRecipesByIngredientsAny(ingredients);
+const searchRecipeSteps = (steps, matchAll) => {
+  if (matchAll && steps.includes(",")) {
+    const searchTerms = steps.split(",").map(el => el.trim());
+    return knex.distinct('recipe_id').from('steps')
+      .where('step', '~*', searchTerms[0])
+      .intersect(
+        searchTerms.slice(1).map(term =>
+          knex.distinct('recipe_id').from('steps').where('step', '~*', term)
+        ),
+        true,
+      );
   }
+  const searchTerm = steps.replace(/,\s*/g, "|");
+  return knex.distinct('recipe_id').from('steps').where('step', '~*', searchTerm);
+}
 
-  const searchTerms = ingredients.split(",").map(el => el.trim());
-  return knex.distinct('recipe_id').from('ingredients')
+
+// Returns a subquery for use in main search function
+const searchRecipeFootnotes = (footnotes, matchAll) => {
+  if (matchAll && footnotes.includes(",")) {
+    const searchTerms = footnotes.split(",").map(el => el.trim());
+    return knex.distinct('recipe_id').from('footnotes')
+      .where('footnote', '~*', searchTerms[0])
+      .intersect(
+        searchTerms.slice(1).map(term =>
+          knex.distinct('recipe_id').from('footnotes').where('footnote', '~*', term)
+        ),
+        true,
+      );
+  }
+  const searchTerm = footnotes.replace(/,\s*/g, "|");
+  return knex.distinct('recipe_id').from('footnotes').where('footnote', '~*', searchTerm);
+}
+
+// @ingredient: string -> a single ingredient or a comma-separated string of ingredients
+// Returns a subquery for use in main search function
+// Query selects recipe_ids whose ingredients or notes match search terms
+const searchRecipeIngredients = (ingredients, matchAll) => {
+  if (matchAll && ingredients.includes(",")) {
+    const searchTerms = ingredients.split(",").map(el => el.trim());
+    return knex.distinct('recipe_id').from('ingredients')
       .where('ingredient', '~*', searchTerms[0]).orWhere('note', '~*', searchTerms[0])
       .intersect(
         searchTerms.slice(1).map(term =>
@@ -445,43 +403,43 @@ const searchRecipesByIngredientsAll = (ingredients) => {
         ),
         true,
       );
+  }
+
+  const searchTerm = ingredients.replace(/\s*,\s*/g, "|");
+  return knex.distinct('recipe_id').from('ingredients')
+      .where('ingredient', '~*', searchTerm)
+      .orWhere('note', '~*', searchTerm)
 }
 
 // @tags: string -> a single ingredient or a comma-separated string of ingredients
 // Returns a subquery for use in main search function
 // Query selects recipe_ids where ingredient or note matches any of the ingredients
-const searchRecipesByTagsAny = (tags) => {
+const searchRecipeTags = (tags, matchAll) => {
+  if (matchAll && tags.includes(",")) {
+    const searchTerms = tags.split(",").map(el => el.trim());
+    return knex.distinct('recipe_id').from('tags')
+      .where('tag', '~*', searchTerms[0])
+      .intersect(
+        searchTerms.slice(1).map(term =>
+          knex.distinct('recipe_id').from('tags').where('tag', '~*', term)
+        ),
+        true,
+      );
+  }
   const searchTerm = tags.replace(/,\s*/g, "|");
   return knex.distinct('recipe_id').from('tags').where('tag', '~*', searchTerm);
 }
 
-// Returns a subquery for use in main search function
-const searchRecipesByTagsAll = (tags) => {
-  if (!tags.includes(",")) {
-    return searchRecipesByTagsAny(tags);
-  }
-
-  const searchTerms = tags.split(",").map(el => el.trim());
-  return knex.distinct('recipe_id').from('tags')
-    .where('tag', '~*', searchTerms[0])
-    .intersect(
-      searchTerms.slice(1).map(term =>
-        knex.distinct('recipe_id').from('tags').where('tag', '~*', term)
-      ),
-      true,
-    );
-}
-
 // Returns a subquery for recipe ids where @searchTerm
 // matches title, ingredient, step, tag or footnote
-const searchWildcard = (searchTerm) => {
-  return searchRecipeDataAny({ title: searchTerm})
+const searchWildcard = (searchTerm, matchAll) => {
+  return searchRecipeDataAny({ title: searchTerm}, matchAll)
     .union(
       [
-        searchRecipesByIngredientsAny(searchTerm),
-        searchRecipesByStep(searchTerm),
-        searchRecipesByTagsAny(searchTerm),
-        searchRecipesByFootnote(searchTerm),
+        searchRecipeIngredients(searchTerm, matchAll),
+        searchRecipeSteps(searchTerm, matchAll),
+        searchRecipeTags(searchTerm, matchAll),
+        searchRecipeFootnotes(searchTerm, matchAll),
       ],
       true,
     );
@@ -558,6 +516,5 @@ module.exports = {
   getAllRecipes,
   getRecipesByIds,
   getFullRecipe,
-  searchRecipesMatchAll,
-  searchRecipesMatchAny,
+  searchRecipesForMatches,
 };

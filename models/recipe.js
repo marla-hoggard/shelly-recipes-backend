@@ -7,8 +7,7 @@ const {
   editRecipe: editRecipeQuery,
   getAllRecipes: getAllRecipesQuery,
   getFullRecipe,
-  searchRecipesMatchAll,
-  searchRecipesMatchAny,
+  searchRecipesForMatches,
   getRecipesByIds,
 } = require('../queries/recipe.js');
 const { fetchQuery } = require('../queries/helpers.js');
@@ -40,7 +39,7 @@ const getRecipe = async (request, response) => {
 const searchRecipes = async (request, response) => {
   const all = Boolean(request.query.all);
 
-  const { data, error } = all ? await searchRecipesMatchAll(request.query) : await searchRecipesMatchAny(request.query);
+  const { data, error } = await searchRecipesForMatches(request.query, all);
 
   if (error) return response.status(400).json({ error });
 
