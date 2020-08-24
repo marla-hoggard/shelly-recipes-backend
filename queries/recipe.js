@@ -336,7 +336,7 @@ const searchRecipeDataAny = (params) => {
   return knex.select('id as recipe_id').from('recipes')
       .modify(queryBuilder => {
         if (title !== undefined) {
-          queryBuilder.orWhere('title', '~*', title.replace(/\s+,\s+/g, "|"));
+          queryBuilder.orWhere('title', '~*', title.replace(/\s*,\s*/g, "|"));
         }
         if (source !== undefined) {
           queryBuilder.orWhere('source', '~*', source);
