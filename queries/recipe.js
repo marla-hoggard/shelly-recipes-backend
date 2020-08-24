@@ -208,7 +208,7 @@ const getRecipeById = async id => {
 };
 
 const getRecipesByIds = async (ids) => {
-  return await fetchQuery(() => knex.select('title').from('recipes').whereIn('id', ids).orderBy('title'));
+  return await fetchQuery(() => knex.select('*').from('recipes').whereIn('id', ids).orderBy('title'));
 }
 
 const getTagsByRecipeId = async id => {
