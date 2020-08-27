@@ -170,7 +170,7 @@ const editRecipe = async (recipe_id, request) => {
 
       if (request.footnotes) {
         const footnotes = request.footnotes.map((footnote, i) => ({
-          footnote: footnote.toLowerCase(),
+          footnote: footnote,
           recipe_order: i,
           recipe_id,
         }));
