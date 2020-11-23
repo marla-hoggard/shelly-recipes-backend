@@ -84,7 +84,8 @@ const signin = async (request, response) => {
 };
 
 // Attempts to sign out a user - POST /signout
-// Must be signed in to access => Expects @token in header
+// Must be signed in to access => Expects token in request.body
+// TODO: Make FE work with token in header and revert this
 const signout = async (request, response) => {
   const result = await clearUserToken(request.user.id);
   return result.error

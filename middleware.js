@@ -1,7 +1,7 @@
 const { getUserByToken } = require('./queries/user.js');
 
 const isAuthenticated = async (req, res, next) => {
-  const token = req.headers.token;
+  const token = req.body.token;
   if (!token) {
     return res.status(401).send("Access denied. No token provided.");
   }
