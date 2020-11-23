@@ -1,4 +1,5 @@
-const { hashPassword, checkPassword, createToken } = require('../helpers/user.js');
+const { v4: createToken } = require('uuid');
+const { hashPassword, checkPassword } = require('../helpers/user.js');
 const {
   createUser,
   getUserByUsername,
@@ -34,7 +35,7 @@ const signup = async (request, response) => {
     delete userReq.password;
     userReq.password_hash = hashedPassword;
 
-    userReq.token = await createToken();
+    userReq.token = createToken();
 
     const user = await createUser(userReq);
     if (user.error) {
@@ -83,7 +84,7 @@ const signin = async (request, response) => {
 };
 
 // Attempts to sign out a user - POST /signout
-// Must be signed to access => Expects @token in header
+// Must be signed in to access => Expects @token in header
 const signout = async (request, response) => {
   const result = await clearUserToken(request.user.id);
   return result.error

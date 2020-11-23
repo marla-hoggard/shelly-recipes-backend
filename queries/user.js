@@ -1,13 +1,13 @@
 const environment = process.env.NODE_ENV || 'development';
 const configuration = require('../knexfile')[environment];
 const knex = require('knex')(configuration);
+const { v4: createToken } = require('uuid');
 
-const { createToken } = require('../helpers/user.js');
 const { fetchQuerySingleRow, fetchQuery } = require('./helpers.js');
 
 const createUser = async (user) => {
   const query = () => {
-    return knex('users').insert({ ...user }, ['id', 'username', 'token'])
+    return knex('users').insert({ ...user }, ['id', 'username', 'first_name', 'last_name', 'email', 'token'])
   }
   return fetchQuerySingleRow(query);
 };
@@ -41,7 +41,7 @@ const updateUserQuery = async (userId, toUpdate) => {
 }
 
 const updateUserToken = async (userId) => {
-  const token = await createToken();
+  const token = createToken();
   const query = () => {
     return knex('users')
       .where('id', userId)

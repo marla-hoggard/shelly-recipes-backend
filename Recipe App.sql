@@ -52,8 +52,8 @@ CREATE TABLE users (
   id serial UNIQUE PRIMARY KEY,
   first_name text NOT NULL,
   last_name text NOT NULL,
-  username text NOT NULL,
-  email text NOT NULL,
+  username text NOT NULL UNIQUE,
+  email text NOT NULL UNIQUE,
   password_hash text NOT NULL,
   token uuid
 );
