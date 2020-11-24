@@ -7,7 +7,7 @@ const { fetchQuerySingleRow, fetchQuery } = require('./helpers.js');
 
 const createUser = async (user) => {
   const query = () => {
-    return knex('users').insert({ ...user }, ['id', 'first_name', 'last_name', 'email', 'username', 'token'])
+    return knex('users').insert({ ...user }, ['id', 'first_name', 'last_name', 'email', 'username', 'token', 'is_admin'])
   }
   return fetchQuerySingleRow(query);
 };
@@ -33,7 +33,7 @@ const updateUserQuery = async (userId, toUpdate) => {
       .where('id', userId)
       .update(
         toUpdate,
-        ['id', 'first_name', 'last_name', 'email', 'username', 'token']
+        ['id', 'first_name', 'last_name', 'email', 'username', 'token', 'is_admin']
       );
   }
 
@@ -47,7 +47,7 @@ const updateUserToken = async (userId) => {
       .where('id', userId)
       .update(
         { token },
-        ['id', 'first_name', 'last_name', 'email', 'username', 'token']
+        ['id', 'first_name', 'last_name', 'email', 'username', 'token', 'is_admin']
       );
   };
   return fetchQuerySingleRow(query);

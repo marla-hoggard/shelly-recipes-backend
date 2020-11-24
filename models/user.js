@@ -76,7 +76,7 @@ const signin = async (request, response) => {
   if (isValidPassword) {
     const userToReturn = await updateUserToken(user.id);
     return userToReturn.error
-      ? response.status(500).json({ error: user.error })
+      ? response.status(500).json({ error: userToReturn.error })
       : response.status(200).json({ user: userToReturn });
   } else {
     return response.status(401).json({ error: "Username or password is invalid."});
