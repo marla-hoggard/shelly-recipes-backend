@@ -19,6 +19,7 @@ const addRecipe = async (request) => {
     servings: request.servings || null,
     category: request.category,
     vegetarian: request.vegetarian || false,
+    featured: request.featured || false,
     created_at: new Date(),
   };
 
@@ -106,7 +107,8 @@ const editRecipe = async (recipe_id, request) => {
           "submitted_by",
           "servings",
           "category",
-          "vegetarian"
+          "vegetarian",
+          "featured",
         ].includes(key)
       ),
   );
@@ -237,6 +239,7 @@ const searchRecipesForMatches = async (params, matchAll) => {
     submitted_by,
     category,
     vegetarian,
+    featured,
     steps,
     footnotes,
     tags,
@@ -247,8 +250,8 @@ const searchRecipesForMatches = async (params, matchAll) => {
 
   const queries = [];
 
-  if (title || source || submitted_by || category || vegetarian) {
-    queries.push(searchRecipeData({ title, source, submitted_by, category, vegetarian }, matchAll));
+  if (title || source || submitted_by || category || vegetarian || featured) {
+    queries.push(searchRecipeData({ title, source, submitted_by, category, vegetarian, featured }, matchAll));
   }
 
   if (steps) {
@@ -302,7 +305,7 @@ const searchRecipeData = (params, matchAll) => {
 // @params = { key: value } where keys in searchable columns of recipes table
 // Returns a subquery for use in main search function
 const searchRecipeDataAll = (params) => {
-  const { title, source, submitted_by, category, vegetarian} = params;
+  const { title, source, submitted_by, category, vegetarian, featured } = params;
   return knex.select('id as recipe_id').from('recipes')
       .modify(queryBuilder => {
         if (title !== undefined) {
@@ -326,13 +329,16 @@ const searchRecipeDataAll = (params) => {
         if (vegetarian !== undefined) {
           queryBuilder.andWhere({ vegetarian });
         }
+        if (featured !== undefined) {
+          queryBuilder.andWhere({ featured });
+        }
       });
 }
 
 // @params = { key: value } where keys in searchable columns of recipes table
 // Returns a subquery for use in main search function
 const searchRecipeDataAny = (params) => {
-  const { title, source, submitted_by, category, vegetarian} = params;
+  const { title, source, submitted_by, category, vegetarian, featured} = params;
   return knex.select('id as recipe_id').from('recipes')
       .modify(queryBuilder => {
         if (title !== undefined) {
@@ -349,6 +355,9 @@ const searchRecipeDataAny = (params) => {
         }
         if (vegetarian !== undefined) {
           queryBuilder.orWhere({ vegetarian });
+        }
+        if (featured !== undefined) {
+          queryBuilder.orWhere({ featured });
         }
       });
 }
@@ -433,7 +442,7 @@ const searchRecipeTags = (tags, matchAll) => {
 // Returns a subquery for recipe ids where @searchTerm
 // matches title, ingredient, step, tag or footnote
 const searchWildcard = (searchTerm, matchAll) => {
-  return searchRecipeDataAny({ title: searchTerm}, matchAll)
+  return searchRecipeDataAny({ title: searchTerm }, matchAll)
     .union(
       [
         searchRecipeIngredients(searchTerm, matchAll),
