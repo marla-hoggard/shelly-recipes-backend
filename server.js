@@ -44,7 +44,7 @@ app.get('/submitters', Recipe.listSubmitters);
 app.post('/signup', User.signup);
 app.post('/signin', User.signin);
 app.post('/signout', isAuthenticated, User.signout);
-app.get('/user/:username', User.getUserProfile);
+app.get('/user', User.getUserProfile);
 app.put('/user/:id', isAuthenticated, User.updateUser);
 app.delete('/user/:id', isAuthenticated, User.deleteUser);
 

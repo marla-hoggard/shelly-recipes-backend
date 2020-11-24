@@ -3,6 +3,7 @@ const { hashPassword, checkPassword } = require('../helpers/user.js');
 const {
   createUser,
   getUserByUsername,
+  getUserByToken,
   updateUserQuery,
   updateUserToken,
   clearUserToken,
@@ -93,13 +94,18 @@ const signout = async (request, response) => {
     : response.status(200).send("User successfully signed out.");
 }
 
-// GET /user/:username
-// Returns the public profile information for the user with :username
+// GET /user
+// Returns the public profile information for the user
+// with username or token supplied in query params
 // Not currently behind an auth wall
 const getUserProfile = async (request, response) => {
-  const { username } = request.params;
+  const { username, token } = request.query;
 
-  const user = await getUserByUsername(username);
+  if (!username && !token) {
+    return response.status(400).json({ error: "Must supply a username or token" });
+  }
+
+  const user = username ? await getUserByUsername(username) : await getUserByToken(token);
   if (user.error) {
     return user.error === "No data found."
       ? response.status(404).json({ error: "User not found." })
@@ -107,10 +113,14 @@ const getUserProfile = async (request, response) => {
   }
 
   return response.status(200).json({
-    first_name: user.first_name,
-    last_name: user.last_name,
-    username: user.username,
-    email: user.email,
+    user: {
+      first_name: user.first_name,
+      last_name: user.last_name,
+      username: user.username,
+      email: user.email,
+      token: user.token,
+      is_admin: user.is_admin,
+    }
   });
 }
 
