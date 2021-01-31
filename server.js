@@ -18,7 +18,7 @@ app.use(
 );
 
 const corsOptions = {
-  origin: [process.env.FRONTEND_BASE_URL_LOCAL, /herokuapp\.com$/],
+  origin: [process.env.FRONTEND_BASE_URL_LOCAL, process.env.FRONTEND_BASE_URL_IP, process.env.FRONTEND_BASE_URL_PROD],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 };
