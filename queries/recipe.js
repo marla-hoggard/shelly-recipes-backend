@@ -197,7 +197,7 @@ const getAllRecipes = async () => {
   const query = () =>
     knex('recipes')
     .leftOuterJoin("tags", "recipes.id", "tags.recipe_id")
-    .select('recipes.*', knex.raw('array_agg(tags.tag) as tags'))
+    .select('recipes.*', knex.raw('array_remove(array_agg(tags.tag), NULL) AS tags'))
     .groupBy('recipes.id')
     .orderBy("recipes.title");
 
