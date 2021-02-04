@@ -210,7 +210,14 @@ const getRecipeById = async id => {
 };
 
 const getRecipesByIds = async (ids) => {
-  return await fetchQuery(() => knex.select('*').from('recipes').whereIn('id', ids).orderBy('title'));
+  return await fetchQuery(() =>
+    knex('recipes')
+    .leftOuterJoin("tags", "recipes.id", "tags.recipe_id")
+    .select('recipes.*', knex.raw('array_remove(array_agg(tags.tag), NULL) AS tags'))
+    .whereIn('recipes.id', ids)
+    .groupBy('recipes.id')
+    .orderBy("recipes.title"),
+  );
 }
 
 const getTagsByRecipeId = async id => {
