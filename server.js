@@ -17,8 +17,14 @@ app.use(
   }),
 );
 
+const allowedOrigins = [
+  process.env.FRONTEND_BASE_URL_LOCAL,
+  process.env.FRONTEND_BASE_URL_IP,
+  process.env.FRONTEND_BASE_URL_PROD
+].map(domain => new RegExp(`https?${domain.replace(/https?/, '')}`))
+
 const corsOptions = {
-  origin: [process.env.FRONTEND_BASE_URL_LOCAL, process.env.FRONTEND_BASE_URL_IP, process.env.FRONTEND_BASE_URL_PROD],
+  origin: allowedOrigins,
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 };
