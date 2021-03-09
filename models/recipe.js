@@ -64,10 +64,6 @@ const addRecipe = async (request, response) => {
     return response.status(400).json({ error: { message:"'submitted_by' is required" }});
   }
 
-  if (!userReq.category) {
-    return response.status(400).json({ error: { message:"'category' is required" }});
-  }
-
   if (!userReq.ingredients || !userReq.ingredients.length) {
     return response.status(400).json({ error: { message:"At least one ingredient is required" }});
   }
@@ -82,14 +78,6 @@ const addRecipe = async (request, response) => {
 
   if (!Array.isArray(userReq.steps)) {
     return response.status(400).json({ error: { message:"Type Error: 'steps' must be an array" }});
-  }
-
-  if (userReq.tags && !Array.isArray(userReq.tags)) {
-    return response.status(400).json({ error: { message:"Type Error: 'tags' must be an array" }});
-  }
-
-  if (userReq.tags && userReq.tags.some(el => typeof el !== "string")) {
-    return response.status(400).json({ error: { message:"Type Error: All 'tags' must be of type string" }});
   }
 
   if (userReq.footnotes && !Array.isArray(userReq.footnotes)) {
@@ -119,20 +107,16 @@ const editRecipe = async (request, response) => {
      return response.status(400).json({ error: { message:"You must include data to update in the request body." }});
   }
 
-  if (userReq.tags && !Array.isArray(userReq.tags)) {
-    return response.status(400).json({ error: { message:"Type Error: 'tags' must be an array" }});
-  }
-
-  if (userReq.tags && userReq.tags.some(el => typeof el !== "string")) {
-    return response.status(400).json({ error: { message:"Type Error: All 'tags' must be of type string" }});
-  }
-
   if (userReq.ingredients && !Array.isArray(userReq.ingredients)) {
     return response.status(400).json({ error: { message:"Type Error: 'ingredients' must be an array" }});
   }
 
   if (userReq.steps && !Array.isArray(userReq.steps)) {
     return response.status(400).json({ error: { message:"Type Error: 'steps' must be an array" }});
+  }
+
+  if (userReq.footnotes && !Array.isArray(userReq.footnotes)) {
+    return response.status(400).json({ error: { message:"Type Error: 'footnotes' must be an array" }});
   }
 
   const result = await editRecipeQuery(id, userReq);
@@ -147,19 +131,6 @@ const editRecipe = async (request, response) => {
   return response.status(200).json({ id: result.recipe_id, title: userReq.title });
 };
 
-const listCategories = async (request, response) => {
-  const result = await fetchQuery(() => knex.raw('SELECT unnest(enum_range(NULL::category))'));
-  if (result.error) return response.status(500).json({ error: "Something went wrong."});
-  const categories = result.data.rows.map(el => el.unnest);
-  return response.status(200).json({ categories });
-};
-
-const listTags = async (request, response) => {
-  const result = await fetchQuery(() => knex.distinct('tag').from('tags').orderBy('tag'));
-  const status = result.error ? 400 : 200;
-  return response.status(status).json({ tags: result.data.map(el => el.tag )});
-}
-
 const listSubmitters = async (request, response) => {
   const result = await fetchQuery(() => knex.distinct('submitted_by').from('recipes').orderBy('submitted_by'));
   const status = result.error ? 400 : 200;
@@ -172,7 +143,5 @@ module.exports = {
   getRecipe,
   getAllRecipes,
   searchRecipes,
-  listCategories,
   listSubmitters,
-  listTags,
 };

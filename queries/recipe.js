@@ -13,13 +13,8 @@ const {
 const addRecipe = async (request) => {
   const recipe = {
     title: request.title,
-    source: request.source || null,
-    source_url: request.source_url || null,
     submitted_by: request.submitted_by,
     servings: request.servings || null,
-    category: request.category,
-    vegetarian: request.vegetarian || false,
-    featured: request.featured || false,
     created_at: new Date(),
   };
 
@@ -64,15 +59,6 @@ const addRecipe = async (request) => {
       const stepsResult = await insertViaTrx(trx, 'steps', steps, recipe_id);
       if (stepsResult.error) return stepsResult;
 
-      if (request.tags) {
-        const tags = request.tags.map(tag => ({
-          tag: tag.toLowerCase(),
-          recipe_id,
-        }));
-        const tagsResult = await insertViaTrx(trx, 'tags', tags, recipe_id);
-        if (tagsResult.error) return tagsResult;
-      }
-
       if (request.footnotes) {
         const footnotes = request.footnotes.map((footnote, i) => ({
         footnote,
@@ -102,13 +88,8 @@ const editRecipe = async (recipe_id, request) => {
       .filter(([key]) =>
         [
           "title",
-          "source",
-          "source_url",
           "submitted_by",
           "servings",
-          "category",
-          "vegetarian",
-          "featured",
         ].includes(key)
       ),
   );
@@ -161,15 +142,6 @@ const editRecipe = async (recipe_id, request) => {
         if (stepsResult.error) return stepsResult;
       }
 
-      if (request.tags) {
-        const tags = request.tags.map(tag => ({
-          tag: tag.toLowerCase(),
-          recipe_id,
-        }));
-        const tagsResult = await deleteAndInsertViaTrx(trx, 'tags', tags, recipe_id);
-        if (tagsResult.error) return tagsResult;
-      }
-
       if (request.footnotes) {
         const footnotes = request.footnotes.map((footnote, i) => ({
           footnote: footnote,
@@ -195,11 +167,7 @@ const editRecipe = async (recipe_id, request) => {
 
 const getAllRecipes = async () => {
   const query = () =>
-    knex('recipes')
-    .leftOuterJoin("tags", "recipes.id", "tags.recipe_id")
-    .select('recipes.*', knex.raw('array_remove(array_agg(tags.tag), NULL) AS tags'))
-    .groupBy('recipes.id')
-    .orderBy("recipes.title");
+    knex.select('*').from('recipes').groupBy('id').orderBy("title");
 
   return await fetchQuery(query);
 };
@@ -211,18 +179,12 @@ const getRecipeById = async id => {
 
 const getRecipesByIds = async (ids) => {
   return await fetchQuery(() =>
-    knex('recipes')
-    .leftOuterJoin("tags", "recipes.id", "tags.recipe_id")
-    .select('recipes.*', knex.raw('array_remove(array_agg(tags.tag), NULL) AS tags'))
-    .whereIn('recipes.id', ids)
-    .groupBy('recipes.id')
-    .orderBy("recipes.title"),
+    knex.select('*').from('recipes')
+      .whereIn('recipes.id', ids)
+      .groupBy('recipes.id')
+      .orderBy("recipes.title"),
   );
 }
-
-const getTagsByRecipeId = async id => {
-  return await fetchQuery(() => knex.select('tag').from('tags').where('recipe_id', id));
-};
 
 const getIngredientsByRecipeId = async id => {
   return await fetchQuery(() => knex.select('ingredient', 'note').from('ingredients').where('recipe_id', id).orderBy('recipe_order'));
@@ -242,14 +204,9 @@ const getFootnotesByRecipeId = async id => {
 const searchRecipesForMatches = async (params, matchAll) => {
   const {
     title,
-    source,
     submitted_by,
-    category,
-    vegetarian,
-    featured,
     steps,
     footnotes,
-    tags,
     ingredients,
     wildcard,
     limit,
@@ -257,8 +214,8 @@ const searchRecipesForMatches = async (params, matchAll) => {
 
   const queries = [];
 
-  if (title || source || submitted_by || category || vegetarian || featured) {
-    queries.push(searchRecipeData({ title, source, submitted_by, category, vegetarian, featured }, matchAll));
+  if (title || submitted_by) {
+    queries.push(searchRecipeData({ title, submitted_by }, matchAll));
   }
 
   if (steps) {
@@ -267,10 +224,6 @@ const searchRecipesForMatches = async (params, matchAll) => {
 
   if (ingredients) {
     queries.push(searchRecipeIngredients(ingredients, matchAll));
-  }
-
-  if (tags) {
-    queries.push(searchRecipeTags(tags, matchAll));
   }
 
   if (footnotes) {
@@ -312,7 +265,7 @@ const searchRecipeData = (params, matchAll) => {
 // @params = { key: value } where keys in searchable columns of recipes table
 // Returns a subquery for use in main search function
 const searchRecipeDataAll = (params) => {
-  const { title, source, submitted_by, category, vegetarian, featured } = params;
+  const { title, submitted_by } = params;
   return knex.select('id as recipe_id').from('recipes')
       .modify(queryBuilder => {
         if (title !== undefined) {
@@ -324,20 +277,8 @@ const searchRecipeDataAll = (params) => {
             queryBuilder.andWhere('title', '~*', title.trim());
           }
         }
-        if (source !== undefined) {
-          queryBuilder.andWhere('source', '~*', source);
-        }
         if (submitted_by !== undefined) {
           queryBuilder.andWhere('submitted_by', '~*', submitted_by);
-        }
-        if (category !== undefined) {
-          queryBuilder.andWhere({ category });
-        }
-        if (vegetarian !== undefined) {
-          queryBuilder.andWhere({ vegetarian });
-        }
-        if (featured !== undefined) {
-          queryBuilder.andWhere({ featured });
         }
       });
 }
@@ -345,26 +286,14 @@ const searchRecipeDataAll = (params) => {
 // @params = { key: value } where keys in searchable columns of recipes table
 // Returns a subquery for use in main search function
 const searchRecipeDataAny = (params) => {
-  const { title, source, submitted_by, category, vegetarian, featured} = params;
+  const { title, submitted_by } = params;
   return knex.select('id as recipe_id').from('recipes')
       .modify(queryBuilder => {
         if (title !== undefined) {
           queryBuilder.orWhere('title', '~*', title.replace(/\s*,\s*/g, "|"));
         }
-        if (source !== undefined) {
-          queryBuilder.orWhere('source', '~*', source);
-        }
         if (submitted_by !== undefined) {
           queryBuilder.orWhere('submitted_by', '~*', submitted_by);
-        }
-        if (category !== undefined) {
-          queryBuilder.orWhere({ category });
-        }
-        if (vegetarian !== undefined) {
-          queryBuilder.orWhere({ vegetarian });
-        }
-        if (featured !== undefined) {
-          queryBuilder.orWhere({ featured });
         }
       });
 }
@@ -427,25 +356,6 @@ const searchRecipeIngredients = (ingredients, matchAll) => {
       .orWhere('note', '~*', searchTerm)
 }
 
-// @tags: string -> a single ingredient or a comma-separated string of ingredients
-// Returns a subquery for use in main search function
-// Query selects recipe_ids where ingredient or note matches any of the ingredients
-const searchRecipeTags = (tags, matchAll) => {
-  if (matchAll && tags.includes(",")) {
-    const searchTerms = tags.split(",").map(el => el.trim());
-    return knex.distinct('recipe_id').from('tags')
-      .where('tag', '~*', searchTerms[0])
-      .intersect(
-        searchTerms.slice(1).map(term =>
-          knex.distinct('recipe_id').from('tags').where('tag', '~*', term)
-        ),
-        true,
-      );
-  }
-  const searchTerm = tags.replace(/,\s*/g, "|");
-  return knex.distinct('recipe_id').from('tags').where('tag', '~*', searchTerm);
-}
-
 // Returns a subquery for recipe ids where @searchTerm
 // matches title, ingredient, step, tag or footnote
 const searchWildcard = (searchTerm, matchAll) => {
@@ -454,7 +364,6 @@ const searchWildcard = (searchTerm, matchAll) => {
       [
         searchRecipeIngredients(searchTerm, matchAll),
         searchRecipeSteps(searchTerm, matchAll),
-        searchRecipeTags(searchTerm, matchAll),
         searchRecipeFootnotes(searchTerm, matchAll),
       ],
       true,
@@ -468,17 +377,6 @@ const getFullRecipe = async (id) => {
     return recipe.error === "No data found."
       ? { error: { message: "Recipe not found."}, status: 404 }
       : { error: { messsage: recipe.error.details, hint: recipe.error.hint }, status: 400 };
-  }
-
-  const tags = await getTagsByRecipeId(id);
-  if (tags.error) {
-    return {
-      error: {
-        messsage: tags.error.details,
-        hint: tags.error.hint
-      },
-      status: 400
-    };
   }
 
   const ingredients = await getIngredientsByRecipeId(id);
@@ -517,7 +415,6 @@ const getFullRecipe = async (id) => {
   return {
     data: {
       ...recipe,
-      tags: tags.data.map(t => t.tag),
       ingredients: ingredients.data.map(i => ({ ingredient: i.ingredient, note: i.note })),
       steps: steps.data.map(s => s.step),
       footnotes: footnotes.data.map(f => f.footnote)

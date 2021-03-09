@@ -6,9 +6,7 @@ const bodyParser = require('body-parser');
 const app = express();
 const port = process.env.PORT || 8000;
 
-const { isAuthenticated } = require('./middleware.js');
 const Recipe = require('./models/recipe.js');
-const User = require('./models/user.js');
 
 app.use(bodyParser.json());
 app.use(
@@ -38,21 +36,11 @@ app.get('/', (request, response) => {
 // Recipe Routes
 app.get('/recipes', Recipe.getAllRecipes);
 app.get('/recipe/:id', Recipe.getRecipe);
-app.post('/recipe/new', Recipe.addRecipe); // TODO: Require authentication
-app.put('/recipe/:id', Recipe.editRecipe); // TODO: Require auth and that user is admin or matches "submitted by"
+app.post('/recipe/new', Recipe.addRecipe);
+app.put('/recipe/:id', Recipe.editRecipe);
 app.get('/search', Recipe.searchRecipes);
 
-app.get('/categories', Recipe.listCategories);
-app.get('/tags', Recipe.listTags);
 app.get('/submitters', Recipe.listSubmitters);
-
-// User Routes
-app.post('/signup', User.signup);
-app.post('/signin', User.signin);
-app.post('/signout', isAuthenticated, User.signout);
-app.get('/user', User.getUserProfile);
-app.put('/user/:id', isAuthenticated, User.updateUser);
-app.delete('/user/:id', isAuthenticated, User.deleteUser);
 
 // Start the app on the right port
 app.listen(port, () => {
