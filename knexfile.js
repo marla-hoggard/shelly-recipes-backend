@@ -1,7 +1,7 @@
 module.exports = {
   development: {
     client: 'pg',
-    connection:'postgres://localhost/recipes_api',
+    connection:'postgres://localhost/shelly_recipes',
     migrations: {
       directory: './db/migrations'
     },
@@ -13,7 +13,7 @@ module.exports = {
 
   test: {
     client: 'pg',
-    connection:'postgres://localhost/recipes_api_test',
+    connection:'postgres://localhost/shelly_recipes_test',
     migrations: {
       directory: './db/migrations'
     },

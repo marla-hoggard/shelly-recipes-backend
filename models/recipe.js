@@ -6,6 +6,7 @@ const {
   addRecipe: addRecipeQuery,
   editRecipe: editRecipeQuery,
   getAllRecipes: getAllRecipesQuery,
+  getAllConfirmedRecipes: getAllConfirmedRecipesQuery,
   getFullRecipe,
   searchRecipesForMatches,
   getRecipesByIds,
@@ -13,10 +14,13 @@ const {
 const { fetchQuery } = require('../queries/helpers.js');
 
 // Gets all recipes from the database
-// Returns all data from @recipes plus an array of tags (no ingredients or steps)
-// TODO: Add query parameter for limit+offset
+// Returns all data from @recipes (no ingredients, steps or notes)
+// If url query includes confirmed=true, only returns recipes that have been confirmed
 const getAllRecipes = async (request, response) => {
-  const result = await getAllRecipesQuery();
+  const confirmedOnly = Boolean(request.query.confirmed);
+  const result = confirmedOnly
+    ? await getAllConfirmedRecipesQuery()
+    : await getAllRecipesQuery();
   const status = result.error ? 400 : 200;
   return response.status(status).json(result);
 };

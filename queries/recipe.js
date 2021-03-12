@@ -14,7 +14,9 @@ const addRecipe = async (request) => {
   const recipe = {
     title: request.title,
     submitted_by: request.submitted_by,
+    message: request.message || null,
     servings: request.servings || null,
+    is_confirmed: request.is_confirmed,
     created_at: new Date(),
   };
 
@@ -42,9 +44,8 @@ const addRecipe = async (request) => {
         };
       }
 
-      const ingredients = request.ingredients.map(({ ingredient, note }, i) => ({
+      const ingredients = request.ingredients.map((ingredient, i) => ({
         ingredient,
-        note,
         recipe_order: i,
         recipe_id,
       }));
@@ -90,6 +91,8 @@ const editRecipe = async (recipe_id, request) => {
           "title",
           "submitted_by",
           "servings",
+          "message",
+          "is_confirmed",
         ].includes(key)
       ),
   );
@@ -121,9 +124,8 @@ const editRecipe = async (recipe_id, request) => {
       }
 
       if (request.ingredients) {
-        const ingredients = request.ingredients.map(({ ingredient, note }, i) => ({
+        const ingredients = request.ingredients.map((ingredient, i) => ({
           ingredient,
-          note,
           recipe_order: i,
           recipe_id,
         }));
@@ -167,10 +169,17 @@ const editRecipe = async (recipe_id, request) => {
 
 const getAllRecipes = async () => {
   const query = () =>
-    knex.select('*').from('recipes').groupBy('id').orderBy("title");
+    knex.select('*').from('recipes').groupBy('id').orderBy("created_at", 'desc');
 
   return await fetchQuery(query);
 };
+
+const getAllConfirmedRecipes = async () => {
+  const query = () =>
+    knex.select('*').from('recipes').where('is_confirmed', true).groupBy('id').orderBy('created_at', 'desc');
+
+  return await fetchQuery(query);
+}
 
 // Getters -> Return exact matches
 const getRecipeById = async id => {
@@ -187,7 +196,7 @@ const getRecipesByIds = async (ids) => {
 }
 
 const getIngredientsByRecipeId = async id => {
-  return await fetchQuery(() => knex.select('ingredient', 'note').from('ingredients').where('recipe_id', id).orderBy('recipe_order'));
+  return await fetchQuery(() => knex.select('ingredient').from('ingredients').where('recipe_id', id).orderBy('recipe_order'));
 };
 
 const getStepsByRecipeId = async id => {
@@ -205,6 +214,7 @@ const searchRecipesForMatches = async (params, matchAll) => {
   const {
     title,
     submitted_by,
+    is_confirmed,
     steps,
     footnotes,
     ingredients,
@@ -214,8 +224,8 @@ const searchRecipesForMatches = async (params, matchAll) => {
 
   const queries = [];
 
-  if (title || submitted_by) {
-    queries.push(searchRecipeData({ title, submitted_by }, matchAll));
+  if (title || submitted_by || is_confirmed) {
+    queries.push(searchRecipeData({ title, submitted_by, is_confirmed }, matchAll));
   }
 
   if (steps) {
@@ -265,7 +275,7 @@ const searchRecipeData = (params, matchAll) => {
 // @params = { key: value } where keys in searchable columns of recipes table
 // Returns a subquery for use in main search function
 const searchRecipeDataAll = (params) => {
-  const { title, submitted_by } = params;
+  const { title, submitted_by, is_confirmed } = params;
   return knex.select('id as recipe_id').from('recipes')
       .modify(queryBuilder => {
         if (title !== undefined) {
@@ -279,6 +289,9 @@ const searchRecipeDataAll = (params) => {
         }
         if (submitted_by !== undefined) {
           queryBuilder.andWhere('submitted_by', '~*', submitted_by);
+        }
+        if (is_confirmed !== undefined) {
+          queryBuilder.andWhere('is_confirmed', is_confirmed)
         }
       });
 }
@@ -294,6 +307,9 @@ const searchRecipeDataAny = (params) => {
         }
         if (submitted_by !== undefined) {
           queryBuilder.orWhere('submitted_by', '~*', submitted_by);
+        }
+        if (is_confirmed !== undefined) {
+          queryBuilder.orWhere('is_confirmed', is_confirmed);
         }
       });
 }
@@ -335,16 +351,16 @@ const searchRecipeFootnotes = (footnotes, matchAll) => {
 
 // @ingredient: string -> a single ingredient or a comma-separated string of ingredients
 // Returns a subquery for use in main search function
-// Query selects recipe_ids whose ingredients or notes match search terms
+// Query selects recipe_ids whose ingredients match search terms
 const searchRecipeIngredients = (ingredients, matchAll) => {
   if (matchAll && ingredients.includes(",")) {
     const searchTerms = ingredients.split(",").map(el => el.trim());
     return knex.distinct('recipe_id').from('ingredients')
-      .where('ingredient', '~*', searchTerms[0]).orWhere('note', '~*', searchTerms[0])
+      .where('ingredient', '~*', searchTerms[0])
       .intersect(
         searchTerms.slice(1).map(term =>
           knex.distinct('recipe_id').from('ingredients')
-            .where('ingredient', '~*', term).orWhere('note', '~*', term)
+            .where('ingredient', '~*', term)
         ),
         true,
       );
@@ -352,8 +368,7 @@ const searchRecipeIngredients = (ingredients, matchAll) => {
 
   const searchTerm = ingredients.replace(/\s*,\s*/g, "|");
   return knex.distinct('recipe_id').from('ingredients')
-      .where('ingredient', '~*', searchTerm)
-      .orWhere('note', '~*', searchTerm)
+    .where('ingredient', '~*', searchTerm)
 }
 
 // Returns a subquery for recipe ids where @searchTerm
@@ -415,7 +430,7 @@ const getFullRecipe = async (id) => {
   return {
     data: {
       ...recipe,
-      ingredients: ingredients.data.map(i => ({ ingredient: i.ingredient, note: i.note })),
+      ingredients: ingredients.data.map(i => i.ingredient),
       steps: steps.data.map(s => s.step),
       footnotes: footnotes.data.map(f => f.footnote)
     },
@@ -427,6 +442,7 @@ module.exports = {
   addRecipe,
   editRecipe,
   getAllRecipes,
+  getAllConfirmedRecipes,
   getRecipesByIds,
   getFullRecipe,
   searchRecipesForMatches,
