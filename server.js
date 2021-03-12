@@ -30,7 +30,7 @@ app.use(cors(corsOptions));
 
 // Routes
 app.get('/', (request, response) => {
-  response.json({ info: 'API made with Node.js and PostgreSQL for storing recipes.' })
+  response.json({ info: 'API made with Node.js and PostgreSQL for sharing recipes.' })
 });
 
 // Recipe Routes

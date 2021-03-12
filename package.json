@@ -1,5 +1,5 @@
 {
-  "name": "recipes-backend",
+  "name": "shelly-recipes-backend",
   "version": "1.0.0",
   "description": "Recipes API with Node and PostgresSQL",
   "main": "server.js",
